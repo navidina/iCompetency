@@ -112,7 +112,7 @@ const MultitaskGame: React.FC<Props> = ({ onExit, onComplete }) => {
       setColorAnswer(null);
 
       const maxNum = difficulty > 5 ? 500 : 100;
-      setNumber(Math.floor(Math.random() * maxNum));
+      setNumber(Math.floor(Math.random() * maxNum) + 1);
 
       const colors = [
           {name: 'قرمز', hex: '#ef4444'},

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Server, Database, Radar, Play, CheckCircle2, XCircle, 
   HelpCircle, Eye, RefreshCw, Zap 
@@ -96,8 +96,9 @@ const CorsiGame: React.FC<{ onFinish: (span: number, rawScore: number) => void }
         
         if (newSuccess >= 2) {
             setSuccessCount(0);
-            setLevel(l => l + 1);
-            setTimeout(() => startRound(level + 1), 1000);
+            const newLevel = level + 1;
+            setLevel(newLevel);
+            setTimeout(() => startRound(newLevel), 1000);
         } else {
             setTimeout(() => startRound(level), 1000);
         }
@@ -301,6 +302,7 @@ const PairedGame: React.FC<{ onFinish: (accuracy: number, rawScore: number) => v
 const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void }> = ({ onFinish }) => {
     const [n, setN] = useState(1);
     const [sequence, setSequence] = useState<string[]>([]);
+    const sequenceRef = useRef<string[]>([]);
     const [showStimulus, setShowStimulus] = useState(false);
     const [gameOver, setGameOver] = useState(false);
     const [trials, setTrials] = useState(0);
@@ -353,6 +355,7 @@ const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void 
             }
 
             setSequence(prev => [...prev, newItem]);
+            sequenceRef.current = [...sequenceRef.current, newItem];
             setUserResponded(false);
             setShowStimulus(true);
             setTrials(t => t + 1);
@@ -372,7 +375,7 @@ const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void 
         if (!showStimulus || sequence.length <= n || userResponded) return;
         
         setUserResponded(true);
-        const target = sequence[sequence.length - 1 - n];
+        const target = sequenceRef.current[sequenceRef.current.length - 1 - n];
         
         if (current === target) {
             setHits(h => h + 1);
@@ -397,7 +400,7 @@ const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void 
                     { label: 'ضربه (Hits)', value: hits },
                     { label: 'خطای مثبت', value: falseAlarms },
                 ]}
-                onRetry={() => { setN(1); setHits(0); setFalseAlarms(0); setTargets(0); setNonTargets(0); setGameOver(false); setSequence([]); setTrials(0); setUserResponded(false); setShowStimulus(false); }}
+                onRetry={() => { setN(1); setHits(0); setFalseAlarms(0); setTargets(0); setNonTargets(0); setGameOver(false); setSequence([]); sequenceRef.current = []; setTrials(0); setUserResponded(false); setShowStimulus(false); }}
                 onComplete={() => onFinish(finalScore, dPrime)}
             />
         );

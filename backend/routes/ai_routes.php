@@ -22,7 +22,7 @@ function ai_generate(): void
     $pdo = Database::pdo();
     $auth = require_auth();
     $rateKey = 'ai-generate:' . (int)$auth['user']['id'] . ':' . client_ip();
-    if (!rate_limit_hit($pdo, $rateKey, (int)app_config('rate_limits.ai_max_attempts', 60), (int)app_config('rate_limits.ai_window_seconds', 3600))) {
+    if (!is_within_rate_limit($pdo, $rateKey, (int)app_config('rate_limits.ai_max_attempts', 60), (int)app_config('rate_limits.ai_window_seconds', 3600))) {
         error_response('RATE_LIMITED', 'تعداد درخواست‌های هوش مصنوعی زیاد است. لطفاً بعداً تلاش کنید.', 429);
     }
 

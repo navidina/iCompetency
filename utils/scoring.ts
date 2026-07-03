@@ -216,25 +216,25 @@ export const getCareerFit = (user: any): CareerProfile[] => {
         {
             title: "تحقیق و توسعه (R&D)",
             description: "حل مسائل پیچیده و نوآوری تکنیکال",
-            fitScore: Math.round((analytical * 0.4) + (spatial * 0.2) + (big5.Openness * 0.4)),
+            fitScore: Math.max(0, Math.min(100, Math.round((analytical * 0.4) + (spatial * 0.2) + (big5.Openness * 0.4)))),
             keyTraits: ["تحلیل‌گری بالا", "گشودگی به تجربه", "تجسم فضایی"]
         },
         {
             title: "مدیریت عملیات (Operations)",
             description: "نظم‌دهی، کارایی و مدیریت منابع",
-            fitScore: Math.round((executive * 0.3) + (big5.Conscientiousness * 0.5) + (big5.Neuroticism * 0.2)),
+            fitScore: Math.max(0, Math.min(100, Math.round((executive * 0.3) + (big5.Conscientiousness * 0.5) + (big5.Neuroticism * 0.2)))),
             keyTraits: ["وجدان کاری بالا", "تمرکز اجرایی", "ثبات هیجانی"]
         },
         {
             title: "مدیریت محصول (Product)",
             description: "تعادل بین نیاز کاربر، فنی و بیزنس",
-            fitScore: Math.round((analytical * 0.3) + (big5.Extraversion * 0.3) + (big5.Openness * 0.2) + (big5.Agreeableness * 0.2)),
+            fitScore: Math.max(0, Math.min(100, Math.round((analytical * 0.3) + (big5.Extraversion * 0.3) + (big5.Openness * 0.2) + (big5.Agreeableness * 0.2)))),
             keyTraits: ["جامع‌نگری", "تعامل اجتماعی", "نوآوری"]
         },
         {
             title: "فروش و بازاریابی",
             description: "ارتباط موثر و اقناع",
-            fitScore: Math.round((big5.Extraversion * 0.6) + (big5.Agreeableness * 0.2) + (executive * 0.2)),
+            fitScore: Math.max(0, Math.min(100, Math.round((big5.Extraversion * 0.6) + (big5.Agreeableness * 0.2) + (executive * 0.2)))),
             keyTraits: ["برون‌گرایی بالا", "انرژی اجتماعی", "سرعت پردازش"]
         }
     ];
