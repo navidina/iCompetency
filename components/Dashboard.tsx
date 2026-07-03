@@ -27,6 +27,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartScenario, onOpenBigF
     return () => clearTimeout(timer);
   }, [user]);
 
+  useEffect(() => {
+    if (!showProfileModal) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowProfileModal(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showProfileModal]);
+
   // Calculations
   const totalSkill = (Object.values(user.skills) as number[]).reduce((a: number, b: number) => a + b, 0);
   const overallScore = user.cognitiveProfile?.tScores?.TCS || (totalSkill > 0 ? Math.min(100, Math.round(totalSkill / 7)) : 0);
@@ -70,7 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartScenario, onOpenBigF
                         <ClipboardCheck size={20} />
                       </div>
                       <div>
-                         <div className="text-xs font-bold text-slate-400 uppercase">شناسه یکتا</div>
+                         <div className="text-xs font-bold text-slate-500 uppercase">شناسه یکتا</div>
                          <div className="text-sm font-black text-slate-900 dark:text-white font-mono" dir="ltr">{accountId || '—'}</div>
                       </div>
                    </div>
@@ -125,9 +134,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartScenario, onOpenBigF
                         <ClipboardCheck size={32} />
                     </div>
                     <div className="flex-1">
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">اقدام بعدی</div>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">اقدام بعدی</div>
                         <button onClick={onStartScenario} className="font-black text-slate-800 dark:text-white hover:text-indigo-600 transition-colors flex items-center gap-1">
-                            ادامه مسیر <ArrowUpRight size={16} />
+                            ادامه مسیر <ArrowUpRight size={16} className="rtl:scale-x-[-1]" />
                         </button>
                     </div>
                 </div>
@@ -136,7 +145,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartScenario, onOpenBigF
                     <div className="flex justify-between items-end mb-2">
                         <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400">{xpPercentage.toFixed(0)}%</span>
                         <div className="text-right">
-                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">سطح فعلی</div>
+                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-0.5">سطح فعلی</div>
                             <div className="text-xl font-black text-slate-900 dark:text-white">{user.level} <span className="inline-block bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-[10px] px-2 py-0.5 rounded-lg ml-2 align-middle">Tier {toPersianNum(user.levelNumber)}</span></div>
                         </div>
                     </div>
@@ -230,10 +239,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartScenario, onOpenBigF
         <div className="col-span-12 lg:col-span-4 bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-soft dark:shadow-none border border-slate-100 dark:border-slate-700 animate-fade-in-up delay-400 flex flex-col min-h-[340px]">
              <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">شاخص کل صلاحیت</h3>
-                <ArrowUpRight size={18} className="text-slate-400" />
+                <ArrowUpRight size={18} className="text-slate-400 rtl:scale-x-[-1]" />
              </div>
 
              <div className="flex-1 flex flex-col items-center justify-center">
+                 {user.totalScenarios === 0 ? (
+                   <div className="flex flex-col items-center justify-center py-12 text-center">
+                     <div className="w-20 h-20 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
+                       <Play size={32} className="text-slate-400" />
+                     </div>
+                     <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200 mb-2">هنوز آزمونی انجام نداده‌اید</h3>
+                     <p className="text-slate-500 text-sm mb-4">با انجام اولین آزمون، نتایج شما اینجا نمایش داده می‌شود.</p>
+                   </div>
+                 ) : (
+                 <>
                  {/* Gauge Chart */}
                  <div className="relative w-48 h-48 flex items-center justify-center mb-6">
                       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
@@ -282,6 +301,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartScenario, onOpenBigF
                      <span className="flex items-center gap-2"><FileText size={14}/> شفافیت محاسبات</span>
                      <ChevronDown size={14} />
                  </button>
+                 </>
+                 )}
              </div>
         </div>
 

@@ -50,6 +50,18 @@ const GameShell: React.FC<GameShellProps> = ({
 }) => {
   const theme = colorMap[colorTheme];
 
+  useEffect(() => {
+    if (gameState !== 'playing' && gameState !== 'paused') return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (gameState === 'playing') setGameState('paused');
+        else if (gameState === 'paused') setGameState('playing');
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [gameState]);
+
   const handleStart = () => {
     setGameState('playing');
   };
@@ -61,12 +73,12 @@ const GameShell: React.FC<GameShellProps> = ({
       {gameState !== 'intro' && (
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm border-b border-slate-200 dark:border-slate-700 p-3 md:p-4 flex justify-between items-center relative z-30">
             <div className="flex items-center gap-3">
-                <button onClick={() => setGameState('paused')} className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white">
+                <button onClick={() => setGameState('paused')} className="p-2.5 min-h-[44px] min-w-[44px] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center justify-center">
                     <Pause size={20} />
                 </button>
                 <div className="hidden md:flex flex-col">
                     <h2 className="font-bold text-slate-800 dark:text-white text-sm">{title}</h2>
-                    {stats.level && <span className="text-[10px] text-slate-400 font-bold">سطح {toPersianNum(stats.level)}</span>}
+                    {stats.level && <span className="text-[10px] text-slate-500 font-bold">سطح {toPersianNum(stats.level)}</span>}
                 </div>
             </div>
 

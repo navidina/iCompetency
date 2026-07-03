@@ -5,8 +5,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Arad', 'sans-serif'],
-        mono: ['Arad', 'monospace'],
+        sans: ['Arad', 'Tahoma', 'Segoe UI', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
       },
       colors: {
         primary: {

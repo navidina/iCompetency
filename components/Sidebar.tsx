@@ -84,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onLogout }
 
         {/* Main Navigation */}
         <nav className="flex-1 px-3 lg:px-6 space-y-2 overflow-y-auto custom-scrollbar py-4">
-          <div className="hidden lg:block text-[10px] font-black text-slate-400 px-4 mb-2 uppercase tracking-widest opacity-60">منوی اصلی</div>
+          <div className="hidden lg:block text-[10px] font-black text-slate-500 px-4 mb-2 uppercase tracking-widest opacity-60">منوی اصلی</div>
           {menuItems.map((item, index) => {
             const isActive = currentView === item.id;
             return (
@@ -115,7 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onLogout }
                     <div className={`text-sm font-bold ${isActive ? 'text-white' : 'text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
                         {item.label}
                     </div>
-                    <div className={`text-[10px] font-medium mt-0.5 ${isActive ? 'text-indigo-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                    <div className={`text-[10px] font-medium mt-0.5 ${isActive ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-500'}`}>
                         {item.description}
                     </div>
                 </div>
@@ -135,7 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onLogout }
                     {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                 </button>
                 <button onClick={onLogout} className="flex-[3] flex items-center justify-center gap-3 p-3 rounded-2xl text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all font-bold text-sm group border border-red-100 dark:border-red-900/30">
-                    <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
+                    <LogOut size={20} className="rtl:scale-x-[-1] group-hover:ltr:-translate-x-1 group-hover:rtl:translate-x-1 transition-transform" />
                     <span className="hidden lg:inline">خروج</span>
                 </button>
             </div>
@@ -151,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onLogout }
                <button
                  key={item.id}
                  onClick={() => !item.disabled && handleMenuClick(item.id as AppView)}
-                 className={`flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 w-full ${
+                 className={`flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 w-full min-h-[44px] min-w-[44px] ${
                    isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'
                  }`}
                >
