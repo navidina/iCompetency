@@ -219,7 +219,7 @@ const MiniGameHub: React.FC<Props> = ({ onSelectGame, user }) => {
 
   return (
     <div className="p-6 md:p-8 h-full overflow-y-auto bg-slate-50/50 dark:bg-slate-900 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto pb-12">
+      <div className="max-w-7xl mx-auto pb-24 md:pb-12">
         <div className="flex flex-col md:flex-row items-center gap-6 mb-10 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-soft dark:shadow-none border border-slate-100 dark:border-slate-700 animate-fade-in-up">
              <div className="w-20 h-20 bg-gradient-to-tr from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-none text-white shrink-0">
                 <BrainCircuit size={40} />

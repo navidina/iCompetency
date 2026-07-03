@@ -84,7 +84,7 @@ export const RoleplayGame: React.FC<Props> = ({ onComplete }) => {
 
   if (phase === 'briefing') {
     return (
-      <div className="h-full overflow-y-auto py-8 px-4">
+      <div className="h-full overflow-y-auto py-8 px-4 pb-24 md:pb-8">
         <div 
           className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-8 border border-slate-100 animate-fade-in-up"
         >
@@ -134,7 +134,7 @@ export const RoleplayGame: React.FC<Props> = ({ onComplete }) => {
 
   if (phase === 'investigation') {
     return (
-      <div className="h-full overflow-y-auto py-8 px-4">
+      <div className="h-full overflow-y-auto py-8 px-4 pb-24 md:pb-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
           <div className="flex gap-6">
@@ -167,7 +167,7 @@ export const RoleplayGame: React.FC<Props> = ({ onComplete }) => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:h-[calc(100vh-240px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:max-h-[calc(100vh-240px)]">
           <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-slate-100 bg-slate-50/50">
               <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -265,7 +265,7 @@ export const RoleplayGame: React.FC<Props> = ({ onComplete }) => {
 
   if (phase === 'decision') {
     return (
-      <div className="h-full overflow-y-auto py-8 px-4">
+      <div className="h-full overflow-y-auto py-8 px-4 pb-24 md:pb-8">
         <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl p-8 border border-slate-100 space-y-8">
           <div>
             <h2 className="text-2xl font-bold text-slate-800 mb-2">زمان تصمیم‌گیری فاز نهایی</h2>
@@ -337,7 +337,7 @@ export const RoleplayGame: React.FC<Props> = ({ onComplete }) => {
     else { grade = '❌ نیاز به توسعه'; msg = 'تشخیص شما ضعیف بود و با تصمیمات پرریسک، شرکت را در معرض خطر قرار دادید.'; }
 
     return (
-      <div className="h-full overflow-y-auto py-8 px-4">
+      <div className="h-full overflow-y-auto py-8 px-4 pb-24 md:pb-8">
         <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl p-8 text-center border border-slate-100">
           <h2 className="text-3xl font-bold text-slate-800 mb-2">گزارش عملکرد مدیرعامل</h2>
           <div className="text-xl font-bold text-indigo-600 my-6">{grade}</div>

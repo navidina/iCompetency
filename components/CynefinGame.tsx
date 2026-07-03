@@ -161,7 +161,7 @@ const CynefinGame: React.FC<Props> = ({ onExit, onComplete }) => {
             </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-4xl mx-auto w-full">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-4xl mx-auto w-full min-h-0">
             
             {/* Scenario Card */}
             <div className="bg-slate-900/50 border border-white/10 rounded-3xl p-6 md:p-8 mb-8 relative overflow-hidden animate-slide-in-right shadow-2xl">

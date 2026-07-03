@@ -220,7 +220,7 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
   }
 
   return (
-    <div className="h-full bg-slate-100 flex flex-col p-4 md:p-6 overflow-hidden animate-fade-in font-sans">
+    <div className="h-full bg-slate-100 flex flex-col p-4 md:p-6 overflow-y-auto animate-fade-in font-sans pb-20 md:pb-6">
       {/* Top Bar */}
       <div className="flex justify-between items-center mb-4 bg-slate-900 text-white p-4 rounded-2xl shadow-lg">
         <div className="flex items-center gap-4">
@@ -285,7 +285,7 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
               </div>
           </div>
       ) : (
-          <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-y-auto lg:overflow-hidden pb-4">
+          <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-visible lg:overflow-hidden pb-4 min-h-0">
               
               {/* LEFT PANE: DIRECTORY */}
               <div className="lg:w-1/4 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:overflow-hidden shrink-0 min-h-[300px] lg:min-h-0">
