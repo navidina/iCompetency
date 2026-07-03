@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -21,7 +21,8 @@ import MemoryGame from './components/MemoryGame';
 import MathGame from './components/MathGame';
 import SpeedGame from './components/SpeedGame';
 import VisualizationGame from './components/VisualizationGame';
-import OrientationGame from './components/OrientationGame';
+// Lazy-loaded 3D Orientation Game (uses Three.js)
+const OrientationGame3D = React.lazy(() => import('./components/OrientationGame3D'));
 import StroopGame from './components/StroopGame';
 import MultitaskGame from './components/MultitaskGame';
 import PatternGame from './components/PatternGame';
@@ -364,7 +365,7 @@ function App() {
               <Route path={VIEW_PATHS[AppView.MINIGAME_PATTERN]} element={<PatternGame onExit={() => changeView(AppView.MINIGAME_HUB)} onComplete={(s) => handleMiniGameComplete(s, '', AppView.MINIGAME_PATTERN)} />} />
               <Route path={VIEW_PATHS[AppView.MINIGAME_SPEED]} element={<SpeedGame onExit={() => changeView(AppView.JOURNEY_MAP)} onComplete={(s) => handleMiniGameComplete(s, 'node-3', AppView.MINIGAME_SPEED)} />} />
               <Route path={VIEW_PATHS[AppView.MINIGAME_VISUALIZATION]} element={<VisualizationGame onExit={() => changeView(AppView.JOURNEY_MAP)} onComplete={(s) => handleMiniGameComplete(s, 'node-4', AppView.MINIGAME_VISUALIZATION)} />} />
-              <Route path={VIEW_PATHS[AppView.MINIGAME_ORIENTATION]} element={<OrientationGame onExit={() => changeView(AppView.JOURNEY_MAP)} onComplete={(s) => handleMiniGameComplete(s, 'node-5', AppView.MINIGAME_ORIENTATION)} />} />
+              <Route path={VIEW_PATHS[AppView.MINIGAME_ORIENTATION]} element={<Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-emerald-500" /></div>}><OrientationGame3D onExit={() => changeView(AppView.JOURNEY_MAP)} onComplete={(s) => handleMiniGameComplete(s, 'node-5', AppView.MINIGAME_ORIENTATION)} /></Suspense>} />
               <Route path={VIEW_PATHS[AppView.MINIGAME_STROOP]} element={<StroopGame onExit={() => changeView(AppView.JOURNEY_MAP)} onComplete={(s) => handleMiniGameComplete(s, 'node-6', AppView.MINIGAME_STROOP)} />} />
               <Route path={VIEW_PATHS[AppView.MINIGAME_MULTITASK]} element={<MultitaskGame onExit={() => changeView(AppView.JOURNEY_MAP)} onComplete={(s) => handleMiniGameComplete(s, 'node-7', AppView.MINIGAME_MULTITASK)} />} />
               <Route
