@@ -9,6 +9,7 @@ import { calculateDPrime } from '../utils/scoring';
 import { UserProfile } from '../types';
 import { sfx } from '../services/audioService';
 import GameResultCard from './GameResultCard';
+import GameShell from './GameShell';
 
 interface Props {
   onExit: () => void;
@@ -432,10 +433,18 @@ const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void 
 
 // --- MAIN WRAPPER ---
 const MemoryGame: React.FC<Props> = ({ onExit, onComplete, onStepComplete }) => {
-    const [gameStage, setGameStage] = useState<'intro' | 'corsi' | 'paired' | 'nback'>('intro');
+    const [gameState, setGameState] = useState<'intro' | 'playing' | 'paused' | 'finished'>('intro');
+    const [gameStage, setGameStage] = useState<'corsi' | 'paired' | 'nback'>('corsi');
     
     // Store raw scores for T-Score calculation
     const [rawScores, setRawScores] = useState({ corsi: 0, paired: 0, nback: 0 });
+
+    // When GameShell transitions to 'playing', start from corsi
+    useEffect(() => {
+        if (gameState === 'playing') {
+            setGameStage('corsi');
+        }
+    }, [gameState]);
 
     const handleCorsiFinish = (span: number, score: number) => {
         setRawScores(prev => ({ ...prev, corsi: span }));
@@ -456,34 +465,28 @@ const MemoryGame: React.FC<Props> = ({ onExit, onComplete, onStepComplete }) => 
         onComplete(score, finalRawScores);
     };
 
-    if (gameStage === 'intro') {
-        return (
-            <div className="h-full flex flex-col items-center justify-center bg-slate-50 p-8 text-center">
-                <div className="w-24 h-24 bg-indigo-100 rounded-3xl flex items-center justify-center text-indigo-600 mb-6 shadow-lg">
-                    <Database size={48} />
-                </div>
-                <h1 className="text-3xl font-black text-slate-800 mb-4">آزمون جامع حافظه (A9)</h1>
-                <p className="text-slate-600 max-w-md mb-8 leading-relaxed">
-                    این آزمون شامل ۳ بخش است: <br/>
-                    ۱. <strong>شبکه امنیتی:</strong> حافظه دیداری (تکرار الگو)<br/>
-                    ۲. <strong>جفت‌های پنهان:</strong> حافظه تداعی‌گر (ارتباط آیکون و رنگ)<br/>
-                    ۳. <strong>رادار تمرکز:</strong> حافظه فعال (N-Back)
-                </p>
-                <button onClick={() => setGameStage('corsi')} className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl">
-                    شروع آزمون
-                </button>
-            </div>
-        );
-    }
-
     return (
-        <div className="h-full w-full relative overflow-hidden bg-white">
-            <button onClick={onExit} className="absolute top-4 right-4 z-50 p-2 text-slate-400 hover:text-slate-600"><XCircle /></button>
-            
-            {gameStage === 'corsi' && <CorsiGame onFinish={handleCorsiFinish} />}
-            {gameStage === 'paired' && <PairedGame onFinish={handlePairedFinish} />}
-            {gameStage === 'nback' && <NBackGame onFinish={handleNBackFinish} />}
-        </div>
+        <GameShell
+            title="آزمون جامع حافظه (A9)"
+            description="این آزمون شامل ۳ بخش است: حافظه دیداری، حافظه تداعی‌گر، و حافظه فعال."
+            instructions={[
+                "بخش ۱: الگوی بلوک‌ها را تماشا و تکرار کنید.",
+                "بخش ۲: جفت‌های آیکون-رنگ را حفظ کنید.",
+                "بخش ۳: تطابق حروف با N مرحله قبل را تشخیص دهید."
+            ]}
+            icon={<Database />}
+            stats={{ score: 0 }}
+            onExit={onExit}
+            gameState={gameState}
+            setGameState={setGameState}
+            colorTheme="emerald"
+        >
+            <div className="h-full w-full relative overflow-hidden">
+                {gameStage === 'corsi' && <CorsiGame onFinish={handleCorsiFinish} />}
+                {gameStage === 'paired' && <PairedGame onFinish={handlePairedFinish} />}
+                {gameStage === 'nback' && <NBackGame onFinish={handleNBackFinish} />}
+            </div>
+        </GameShell>
     );
 };
 

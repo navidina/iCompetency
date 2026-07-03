@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, Check, X, TrendingUp, ArrowRight, RotateCw, HelpCircle } from 'lucide-react';
-import GameIntro from './GameIntro';
+import GameShell from './GameShell';
 import GameResultCard from './GameResultCard';
 import { toPersianNum } from '../utils';
 
@@ -80,7 +80,7 @@ const AngleGauge = ({ degrees }: { degrees: number }) => {
 };
 
 const VisualizationGame: React.FC<Props> = ({ onExit, onComplete }) => {
-  const [showIntro, setShowIntro] = useState(true);
+  const [gameState, setGameState] = useState<'intro' | 'playing' | 'paused' | 'finished'>('intro');
   const [round, setRound] = useState(1);
   const [difficulty, setDifficulty] = useState(1); // CAT Level
   const [score, setScore] = useState(0);
@@ -93,8 +93,8 @@ const VisualizationGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [options, setOptions] = useState<ShapeOption[]>([]);
 
   useEffect(() => {
-      if (!showIntro) generateLevel();
-  }, [round, showIntro]);
+      if (gameState === 'playing') generateLevel();
+  }, [round, gameState]);
 
   const generateLevel = () => {
       let step = 90;
@@ -147,25 +147,12 @@ const VisualizationGame: React.FC<Props> = ({ onExit, onComplete }) => {
               setRound(r => r + 1);
           } else {
               setFinished(true);
+              setGameState('finished');
           }
       }, 1200); // Slightly longer delay to see the equation result
   };
 
-  if (showIntro) {
-    return (
-      <GameIntro
-        title="قدرت تجسم (A12)"
-        description="این آزمون توانایی چرخش ذهنی شما را می‌سنجد. شکل مبدا و مقدار چرخش داده می‌شود؛ نتیجه صحیح را انتخاب کنید. مراقب گزینه‌های قرینه (آینه‌ای) باشید — قرینه با هیچ چرخشی به دست نمی‌آید!"
-        icon={<Box />}
-        gradientFrom="from-indigo-500"
-        gradientTo="to-violet-600"
-        accentColor="text-indigo-600"
-        onStart={() => setShowIntro(false)}
-      />
-    );
-  }
-
-  if (finished) {
+  if (finished || gameState === 'finished') {
       const normalizedScore = Math.min(100, Math.round(score / 5));
 
       return (
@@ -184,6 +171,7 @@ const VisualizationGame: React.FC<Props> = ({ onExit, onComplete }) => {
                 setFinished(false);
                 setSelectedIndex(null);
                 setIsCorrect(null);
+                setGameState('playing');
                 generateLevel();
             }}
             onComplete={() => onComplete(normalizedScore)}
@@ -194,103 +182,119 @@ const VisualizationGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const selectedOption = selectedIndex !== null ? options[selectedIndex] : null;
 
   return (
-    <div className="h-full bg-slate-900 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        {/* Background Grid */}
-        <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'radial-gradient(#6366f1 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
+    <GameShell
+        title="قدرت تجسم (A12)"
+        description="این آزمون توانایی چرخش ذهنی شما را می‌سنجد. شکل مبدا و مقدار چرخش داده شده؛ نتیجه صحیح را انتخاب کنید."
+        instructions={[
+            "شکل مبدا و زاویه چرخش را ببینید.",
+            "نتیجه صحیح چرخش را از بین گزینه‌ها انتخاب کنید.",
+            "مراقب گزینه‌های قرینه (آینه‌ای) باشید — آنها پاسخ صحیح نیستند!"
+        ]}
+        icon={<Box />}
+        stats={{ score, level: difficulty }}
+        onExit={onExit}
+        onRestart={() => { setRound(1); setDifficulty(1); setScore(0); setFinished(false); setSelectedIndex(null); setIsCorrect(null); }}
+        gameState={gameState}
+        setGameState={setGameState}
+        colorTheme="indigo"
+    >
+        <div className="h-full bg-slate-900 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
+            {/* Background Grid */}
+            <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'radial-gradient(#6366f1 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
 
-        <div className="flex justify-between w-full max-w-lg mb-8 items-center z-10">
-            <div className="flex items-center gap-3">
-                <span className="text-indigo-300 font-bold bg-white/10 px-3 py-1 rounded-full text-xs">مرحله {toPersianNum(round)} / {toPersianNum(MAX_ROUNDS)}</span>
-                <span className="text-white font-bold text-xs flex items-center gap-1"><TrendingUp size={14}/> سطح {toPersianNum(difficulty)}</span>
-            </div>
-            <button onClick={onExit} className="text-xs font-bold text-indigo-300 hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded-lg">خروج</button>
-        </div>
-
-        {/* --- The Visual Equation --- */}
-        <div className="w-full max-w-2xl mb-12 flex items-center justify-between px-4 z-10 gap-2 md:gap-4">
-
-            {/* 1. Original Shape */}
-            <div className="flex flex-col items-center gap-3">
-                <div className="w-24 h-24 md:w-32 md:h-32 bg-slate-800 rounded-2xl border-2 border-slate-600 flex items-center justify-center shadow-lg relative">
-                    <div className="absolute -top-3 bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-slate-600">مبدا</div>
-                    <ChiralShape size={56} className="text-indigo-400 drop-shadow-lg" />
+            <div className="flex justify-between w-full max-w-lg mb-8 items-center z-10">
+                <div className="flex items-center gap-3">
+                    <span className="text-indigo-300 font-bold bg-white/10 px-3 py-1 rounded-full text-xs">مرحله {toPersianNum(round)} / {toPersianNum(MAX_ROUNDS)}</span>
+                    <span className="text-white font-bold text-xs flex items-center gap-1"><TrendingUp size={14}/> سطح {toPersianNum(difficulty)}</span>
                 </div>
             </div>
 
-            {/* Operator */}
-            <div className="flex flex-col items-center text-slate-500">
-                <ArrowRight size={24} className="md:hidden" />
-                <div className="hidden md:block text-2xl font-black text-slate-600">+</div>
-            </div>
+            {/* --- The Visual Equation --- */}
+            <div className="w-full max-w-2xl mb-12 flex items-center justify-between px-4 z-10 gap-2 md:gap-4">
 
-            {/* 2. Rotation Instruction */}
-            <div className="flex flex-col items-center gap-3">
-                <AngleGauge degrees={targetRotation} />
-                <span className="text-xs font-bold text-slate-400">چرخش</span>
-            </div>
-
-            {/* Operator */}
-            <div className="flex flex-col items-center text-slate-500">
-                <ArrowRight size={24} className="md:hidden" />
-                <div className="hidden md:block text-2xl font-black text-slate-600">=</div>
-            </div>
-
-            {/* 3. Result Placeholder (Question Mark) */}
-            <div className="flex flex-col items-center gap-3">
-                <div className={`w-24 h-24 md:w-32 md:h-32 rounded-2xl border-2 border-dashed flex items-center justify-center shadow-inner transition-all duration-300 ${selectedOption !== null ? (isCorrect ? 'bg-emerald-500/20 border-emerald-500' : 'bg-red-500/20 border-red-500') : 'bg-slate-800/50 border-slate-600'}`}>
-                    {selectedOption !== null ? (
-                        <ChiralShape size={56} deg={selectedOption.deg} mirrored={selectedOption.mirrored} className={isCorrect ? 'text-emerald-400' : 'text-red-400'} />
-                    ) : (
-                        <HelpCircle size={32} className="text-slate-600 animate-pulse" />
-                    )}
+                {/* 1. Original Shape */}
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-24 h-24 md:w-32 md:h-32 bg-slate-800 rounded-2xl border-2 border-slate-600 flex items-center justify-center shadow-lg relative">
+                        <div className="absolute -top-3 bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-slate-600">مبدا</div>
+                        <ChiralShape size={56} className="text-indigo-400 drop-shadow-lg" />
+                    </div>
                 </div>
-                <span className="text-xs font-bold text-slate-400">نتیجه؟</span>
-            </div>
 
-        </div>
+                {/* Operator */}
+                <div className="flex flex-col items-center text-slate-500">
+                    <ArrowRight size={24} className="md:hidden" />
+                    <div className="hidden md:block text-2xl font-black text-slate-600">+</div>
+                </div>
 
-        {/* Options Grid */}
-        <div className="grid grid-cols-3 gap-4 md:gap-8 w-full max-w-xl px-4 z-10">
-            {options.map((opt, idx) => {
-                const isTheCorrectOption = !opt.mirrored && opt.deg === targetRotation;
-                let btnClass = "bg-white text-indigo-950 hover:scale-105 hover:shadow-xl hover:bg-indigo-50";
-                if (selectedIndex !== null) {
-                    if (idx === selectedIndex) {
-                        btnClass = isCorrect
-                            ? "bg-emerald-500 text-white scale-105 ring-4 ring-emerald-500/30 border-emerald-400"
-                            : "bg-red-500 text-white scale-95 ring-4 ring-red-500/30 border-red-400";
-                    } else if (isTheCorrectOption) {
-                        // Highlight the correct answer if user got it wrong
-                        btnClass = "bg-emerald-100 text-emerald-800 opacity-50 scale-95 border-emerald-200";
-                    } else {
-                        btnClass = "bg-slate-800 text-slate-500 opacity-20 scale-90 border-slate-700";
-                    }
-                }
+                {/* 2. Rotation Instruction */}
+                <div className="flex flex-col items-center gap-3">
+                    <AngleGauge degrees={targetRotation} />
+                    <span className="text-xs font-bold text-slate-400">چرخش</span>
+                </div>
 
-                return (
-                    <button
-                        key={idx}
-                        onClick={() => handleGuess(idx)}
-                        disabled={selectedIndex !== null}
-                        className={`aspect-square rounded-2xl flex flex-col items-center justify-center transition-all duration-300 shadow-lg border-b-4 border-black/10 active:border-b-0 active:translate-y-1 relative overflow-hidden ${btnClass}`}
-                    >
-                        <div className="absolute top-2 left-2 text-[10px] font-bold opacity-40">{toPersianNum(idx + 1)}</div>
-                        <ChiralShape size={44} deg={opt.deg} mirrored={opt.mirrored} className="drop-shadow-sm" />
+                {/* Operator */}
+                <div className="flex flex-col items-center text-slate-500">
+                    <ArrowRight size={24} className="md:hidden" />
+                    <div className="hidden md:block text-2xl font-black text-slate-600">=</div>
+                </div>
 
-                        {selectedIndex !== null && idx === selectedIndex && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
-                                {isCorrect ? <Check size={32} className="text-white" /> : <X size={32} className="text-white" />}
-                            </div>
+                {/* 3. Result Placeholder (Question Mark) */}
+                <div className="flex flex-col items-center gap-3">
+                    <div className={`w-24 h-24 md:w-32 md:h-32 rounded-2xl border-2 border-dashed flex items-center justify-center shadow-inner transition-all duration-300 ${selectedOption !== null ? (isCorrect ? 'bg-emerald-500/20 border-emerald-500' : 'bg-red-500/20 border-red-500') : 'bg-slate-800/50 border-slate-600'}`}>
+                        {selectedOption !== null ? (
+                            <ChiralShape size={56} deg={selectedOption.deg} mirrored={selectedOption.mirrored} className={isCorrect ? 'text-emerald-400' : 'text-red-400'} />
+                        ) : (
+                            <HelpCircle size={32} className="text-slate-600 animate-pulse" />
                         )}
-                    </button>
-                )
-            })}
-        </div>
+                    </div>
+                    <span className="text-xs font-bold text-slate-400">نتیجه؟</span>
+                </div>
 
-        <div className="mt-8 text-slate-500 text-xs font-medium max-w-md text-center leading-relaxed">
-            گزینه‌ای را انتخاب کنید که حاصل چرخش شکل مبدا به اندازه زاویه نشان داده شده باشد. گزینه‌های قرینه (آینه‌ای) پاسخ صحیح نیستند.
+            </div>
+
+            {/* Options Grid */}
+            <div className="grid grid-cols-3 gap-4 md:gap-8 w-full max-w-xl px-4 z-10">
+                {options.map((opt, idx) => {
+                    const isTheCorrectOption = !opt.mirrored && opt.deg === targetRotation;
+                    let btnClass = "bg-white text-indigo-950 hover:scale-105 hover:shadow-xl hover:bg-indigo-50";
+                    if (selectedIndex !== null) {
+                        if (idx === selectedIndex) {
+                            btnClass = isCorrect
+                                ? "bg-emerald-500 text-white scale-105 ring-4 ring-emerald-500/30 border-emerald-400"
+                                : "bg-red-500 text-white scale-95 ring-4 ring-red-500/30 border-red-400";
+                        } else if (isTheCorrectOption) {
+                            // Highlight the correct answer if user got it wrong
+                            btnClass = "bg-emerald-100 text-emerald-800 opacity-50 scale-95 border-emerald-200";
+                        } else {
+                            btnClass = "bg-slate-800 text-slate-500 opacity-20 scale-90 border-slate-700";
+                        }
+                    }
+
+                    return (
+                        <button
+                            key={idx}
+                            onClick={() => handleGuess(idx)}
+                            disabled={selectedIndex !== null}
+                            className={`aspect-square rounded-2xl flex flex-col items-center justify-center transition-all duration-300 shadow-lg border-b-4 border-black/10 active:border-b-0 active:translate-y-1 relative overflow-hidden ${btnClass}`}
+                        >
+                            <div className="absolute top-2 left-2 text-[10px] font-bold opacity-40">{toPersianNum(idx + 1)}</div>
+                            <ChiralShape size={44} deg={opt.deg} mirrored={opt.mirrored} className="drop-shadow-sm" />
+
+                            {selectedIndex !== null && idx === selectedIndex && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
+                                    {isCorrect ? <Check size={32} className="text-white" /> : <X size={32} className="text-white" />}
+                                </div>
+                            )}
+                        </button>
+                    )
+                })}
+            </div>
+
+            <div className="mt-8 text-slate-500 text-xs font-medium max-w-md text-center leading-relaxed">
+                گزینه‌ای را انتخاب کنید که حاصل چرخش شکل مبدا به اندازه زاویه نشان داده شده باشد. گزینه‌های قرینه (آینه‌ای) پاسخ صحیح نیستند.
+            </div>
         </div>
-    </div>
+    </GameShell>
   );
 };
 
