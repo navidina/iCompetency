@@ -4,6 +4,25 @@ import { SwotData } from '../types';
 import { generateSwotData } from '../services/geminiService';
 import { Loader2, Building2, BrainCircuit, CheckCircle2, XCircle } from 'lucide-react';
 import { toPersianNum } from '../utils';
+import { sfx } from '../services/audioService';
+
+function normalizeCategory(raw: string): 'S' | 'W' | 'O' | 'T' {
+  const val = raw.trim().toUpperCase();
+  // Single letter match
+  if (val === 'S' || val === 'W' || val === 'O' || val === 'T') return val;
+  // English full-word match
+  if (val.startsWith('STRENGTH')) return 'S';
+  if (val.startsWith('WEAKNESS')) return 'W';
+  if (val.startsWith('OPPORTUNIT')) return 'O';
+  if (val.startsWith('THREAT')) return 'T';
+  // Persian match
+  if (val.includes('قوت') || val.includes('قدرت')) return 'S';
+  if (val.includes('ضعف')) return 'W';
+  if (val.includes('فرصت')) return 'O';
+  if (val.includes('تهدید')) return 'T';
+  // Fallback: return as-is (first char uppercase)
+  return val.charAt(0) as 'S' | 'W' | 'O' | 'T';
+}
 
 interface Props {
   onExit: () => void;
@@ -32,16 +51,20 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
     if (!data || feedback) return;
     
     const item = data.items[currentIndex];
-    const isCorrect = item.category === category;
+    const isCorrect = normalizeCategory(item.category) === category;
 
+    const categoryLabels: Record<string, string> = { S: 'نقاط قوت (Strengths)', W: 'نقاط ضعف (Weaknesses)', O: 'فرصت‌ها (Opportunities)', T: 'تهدیدها (Threats)' };
     setFeedback({
         correct: isCorrect,
-        msg: isCorrect ? "دقیقاً!" : `اشتباه. این مورد ${item.category} است زیرا: ${item.reason}`
+        msg: isCorrect ? "دقیقاً!" : `اشتباه. این مورد ${categoryLabels[normalizeCategory(item.category)] || item.category} است زیرا: ${item.reason}`
     });
 
     if (isCorrect) {
+        sfx.playSuccess();
         setScore(s => s + 10);
         setSortCorrect(c => c + 1);
+    } else {
+        sfx.playError();
     }
 
     setTimeout(() => {
@@ -63,7 +86,12 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
           feedback: opt.feedback
       });
 
-      if (opt.isCorrect) setScore(s => s + 50); // Big bonus for strategy
+      if (opt.isCorrect) {
+          sfx.playSuccess();
+          setScore(s => s + 50); // Big bonus for strategy
+      } else {
+          sfx.playError();
+      }
 
       setTimeout(() => {
           setPhase('finished');
@@ -113,15 +141,15 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
       const currentItem = data.items[currentIndex];
       return (
         <div className="h-full bg-slate-50 flex flex-col overflow-hidden animate-fade-in-up">
-            <div className="bg-white p-4 border-b border-slate-200 flex justify-between items-center shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="bg-blue-100 p-2 rounded text-blue-600"><Building2 size={20} /></div>
-                    <div>
-                        <h2 className="font-bold text-slate-800">{data.companyContext}</h2>
-                        <p className="text-xs text-slate-500">فاز ۱: طبقه‌بندی ({toPersianNum(currentIndex + 1)}/{toPersianNum(data.items.length)})</p>
+            <div className="bg-white p-3 md:p-4 border-b border-slate-200 shadow-sm">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-blue-100 p-2 rounded-lg text-blue-600 shrink-0"><Building2 size={18} /></div>
+                        <p className="text-xs text-slate-500 font-bold">فاز ۱: طبقه‌بندی ({toPersianNum(currentIndex + 1)}/{toPersianNum(data.items.length)})</p>
                     </div>
+                    <div className="text-lg font-bold text-blue-600 tabular-nums bg-blue-50 px-3 py-1 rounded-full">{toPersianNum(score)}</div>
                 </div>
-                <div className="text-xl font-bold text-blue-600 tabular-nums">{toPersianNum(score)}</div>
+                <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">{data.companyContext}</p>
             </div>
 
             <div className="flex-1 p-8 flex flex-col items-center justify-center relative">

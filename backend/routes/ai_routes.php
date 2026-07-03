@@ -165,7 +165,7 @@ function ai_spec_swot(): array
 {
     $item = schema_object(['text'=>str_schema(),'category'=>str_schema(),'reason'=>str_schema()], ['text','category','reason']);
     $opt = schema_object(['text'=>str_schema(),'isCorrect'=>bool_schema(),'feedback'=>str_schema()], ['text','isCorrect','feedback']);
-    return ['prompt'=>'Generate a Persian SWOT game with companyContext, 8-10 items and strategyPhase. Return JSON only.', 'schema'=>schema_object(['companyContext'=>str_schema(),'items'=>schema_array($item),'strategyPhase'=>schema_object(['question'=>str_schema(),'options'=>schema_array($opt)], ['question','options'])], ['companyContext','items','strategyPhase']), 'fallback'=>swot_fallback()];
+    return ['prompt'=>'Generate a Persian SWOT game with companyContext (max 2 sentences), 8-10 items where each item has text (the statement in Persian), category (MUST be exactly one of: "S", "W", "O", "T"), and reason (explanation in Persian). Also include a strategyPhase with a question and 3 options. Return JSON only.', 'schema'=>schema_object(['companyContext'=>str_schema(),'items'=>schema_array($item),'strategyPhase'=>schema_object(['question'=>str_schema(),'options'=>schema_array($opt)], ['question','options'])], ['companyContext','items','strategyPhase']), 'fallback'=>swot_fallback()];
 }
 
 function ai_spec_cynefin(): array
