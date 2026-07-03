@@ -138,7 +138,7 @@ const CynefinGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const progress = ((index + 1) / data.scenarios.length) * 100;
 
   return (
-    <div className="h-full bg-slate-950 text-white flex flex-col overflow-hidden font-sans">
+    <div className="h-full bg-slate-950 text-white flex flex-col overflow-hidden font-sans pb-20 md:pb-0">
         
         {/* Progress Line */}
         <div className="w-full h-1 bg-slate-900">

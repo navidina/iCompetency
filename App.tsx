@@ -318,7 +318,7 @@ function App() {
         user={user}
       />
 
-      <main className="flex-1 h-full md:mr-20 lg:mr-72 pb-16 md:pb-0 transition-all duration-300 relative z-10">
+      <main className="flex-1 h-full md:mr-20 lg:mr-72 pb-20 md:pb-0 transition-all duration-300 relative z-10">
           <div className="h-full w-full animate-fade-in-up overflow-hidden">
             <Routes>
               <Route path="/" element={<Navigate to={VIEW_PATHS[AppView.DASHBOARD]} replace />} />

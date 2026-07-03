@@ -567,7 +567,7 @@ const BigFiveGame: React.FC<Props> = ({ onExit, onComplete }) => {
 
   if (gameState === 'results') {
       return (
-        <div className="h-full bg-slate-950 text-white overflow-y-auto custom-scrollbar p-6 md:p-8 animate-fade-in-up">
+        <div className="h-full bg-slate-950 text-white overflow-y-auto custom-scrollbar p-6 md:p-8 pb-24 md:pb-8 animate-fade-in-up">
             <div className="max-w-5xl mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-white/10 pb-6 gap-4">
                     <div>

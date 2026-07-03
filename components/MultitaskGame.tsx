@@ -209,7 +209,7 @@ const MultitaskGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const roundRemaining = Math.max(0, 1 - (Date.now() - roundStartRef.current) / roundDeadlineMs(difficulty));
 
   return (
-    <div className="h-full bg-slate-950 text-white flex flex-col p-2 relative overflow-hidden font-sans">
+    <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col p-2 relative overflow-hidden font-sans">
         
         {/* Top Bar */}
         <div className="flex justify-between items-center mb-2 px-2 pt-2">

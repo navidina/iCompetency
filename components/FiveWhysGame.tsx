@@ -161,7 +161,7 @@ const FiveWhysGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const levelData = data.levels[currentLevel];
 
   return (
-    <div className={`h-full flex flex-col p-6 overflow-y-auto transition-colors duration-500 ${gameState === 'rabbit_hole' ? 'bg-red-950' : 'bg-slate-900'} text-slate-100`}>
+    <div className={`h-full flex flex-col p-6 pb-24 md:pb-6 overflow-y-auto transition-colors duration-500 ${gameState === 'rabbit_hole' ? 'bg-red-950' : 'bg-slate-900'} text-slate-100`}>
       
       {/* Header */}
       <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">

@@ -174,7 +174,7 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
   if (phase === 'sorting') {
       const currentItem = data.items[currentIndex];
       return (
-        <div className="h-full bg-slate-50 flex flex-col overflow-hidden animate-fade-in-up">
+        <div className="h-full bg-slate-50 flex flex-col overflow-y-auto animate-fade-in-up pb-20 md:pb-0">
             <div className="bg-white p-3 md:p-4 border-b border-slate-200 shadow-sm">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -222,7 +222,7 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
 
   // --- PHASE 2: STRATEGY ---
   return (
-    <div className="h-full bg-slate-900 text-white flex flex-col overflow-hidden animate-fade-in">
+    <div className="h-full bg-slate-900 text-white flex flex-col overflow-y-auto animate-fade-in pb-20 md:pb-0">
         <div className="bg-slate-800 p-6 shadow-md border-b border-slate-700 text-center">
             <h2 className="text-2xl font-black text-amber-400 mb-2">فاز ۲: تدوین استراتژی</h2>
             <p className="text-slate-400 text-sm">بر اساس تحلیل‌های انجام شده، بهترین اقدام را انتخاب کنید.</p>
