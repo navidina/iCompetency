@@ -491,10 +491,10 @@ const OrientationGame3D: React.FC<Props> = ({ onExit, onComplete }) => {
 
   // Stats
   const [score, setScore] = useState(0);
-  const [combo, setCombo] = useState(SCORING.INITIAL_COMBO);
+  const [combo, setCombo] = useState<number>(SCORING.INITIAL_COMBO);
   const [difficulty, setDifficulty] = useState(1);
   const [correctCount, setCorrectCount] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(SCORING.GAME_DURATION);
+  const [timeLeft, setTimeLeft] = useState<number>(SCORING.GAME_DURATION);
 
   // Tutorial
   const [tutorialStep, setTutorialStep] = useState(0);
