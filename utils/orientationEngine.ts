@@ -70,7 +70,8 @@ export function evaluateAnswer(
   let vz = -Math.cos(targetAngleRad);
 
   // Apply yaw rotation (around Y axis)
-  const yawRad = toRad(rotation.yaw);
+  // Negate yaw so positive yaw = clockwise from top view (matches visual convention)
+  const yawRad = toRad(-rotation.yaw);
   const cosY = Math.cos(yawRad),
     sinY = Math.sin(yawRad);
   let nx = vx * cosY + vz * sinY;
@@ -96,9 +97,9 @@ export function evaluateAnswer(
   vx = nx;
   vy = ny;
 
-  // Project onto screen plane (vx = right, vy = up)
-  // Determine dominant direction
-  const screenAngle = Math.atan2(vx, -vy) * (180 / Math.PI); // angle from UP
+  // Project onto screen plane from camera perspective (pos [0,5,6] looking at origin)
+  // Screen "up" corresponds to world -Z, screen "right" to world +X
+  const screenAngle = Math.atan2(vx, -vz) * (180 / Math.PI); // angle from UP (screen space)
   const normalizedAngle = ((screenAngle % 360) + 360) % 360;
 
   // Snap to quadrant

@@ -73,7 +73,7 @@ function CompassRose3D({ rotation, combo, feedback }: CompassRose3DProps) {
     const toRad = (d: number) => (d * Math.PI) / 180;
     targetRotation.current = {
       x: toRad(rotation.pitch),
-      y: toRad(rotation.yaw),
+      y: toRad(-rotation.yaw), // Negate so positive yaw = clockwise from top view
       z: toRad(rotation.roll),
     };
   }, [rotation]);

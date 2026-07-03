@@ -5,6 +5,7 @@ import GameShell from './GameShell';
 import GameResultCard from './GameResultCard';
 import { toPersianNum } from '../utils';
 import { calculateStroopScore } from '../utils/scoring';
+import { sfx } from '../services/audioService';
 
 interface Props {
   onExit: () => void;
@@ -141,6 +142,7 @@ const StroopGame: React.FC<Props> = ({ onExit, onComplete }) => {
         setCorrectCount(prev => prev + 1);
         setScore(s => s + 10); // Base points
         setFlash('correct');
+        sfx.playSuccess();
 
         // Record RT for analysis
         if (isCongruent) {
@@ -151,6 +153,7 @@ const StroopGame: React.FC<Props> = ({ onExit, onComplete }) => {
     } else {
         setScore(s => Math.max(0, s - 10)); // Penalty
         setFlash('wrong');
+        sfx.playError();
     }
 
     setTimeout(() => setFlash(null), 200);
