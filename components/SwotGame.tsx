@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { SwotData } from '../types';
 import { generateSwotData } from '../services/geminiService';
-import { Loader2, Building2, BrainCircuit, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Building2, BrainCircuit, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { toPersianNum } from '../utils';
 import { sfx } from '../services/audioService';
 
@@ -31,6 +31,8 @@ interface Props {
 
 const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [data, setData] = useState<SwotData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [phase, setPhase] = useState<'sorting' | 'strategy' | 'finished'>('sorting');
   
   // Phase 1 State
@@ -44,8 +46,19 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [strategyResult, setStrategyResult] = useState<{correct: boolean, feedback: string} | null>(null);
 
   useEffect(() => {
-    generateSwotData().then(d => setData(d));
+    generateSwotData()
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
   }, []);
+
+  // Timeout safety net: if loading takes more than 15 seconds, show error
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      if (loading) { setError(true); setLoading(false); }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const handleChoice = (category: 'S' | 'W' | 'O' | 'T') => {
     if (!data || feedback) return;
@@ -98,11 +111,32 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
       }, 3000);
   };
 
-  if (!data) {
+  if (loading) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-slate-50 text-slate-900 animate-fade-in-up">
         <Loader2 className="animate-spin w-10 h-10 text-blue-500 mb-4" />
         <p className="text-lg font-medium">در حال تحلیل داده‌های بازار...</p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-slate-50 text-slate-900 p-8 text-center">
+        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">خطا در بارگذاری</h2>
+        <p className="text-slate-500 mb-6 text-sm">ارتباط با سرور هوش مصنوعی برقرار نشد.</p>
+        <div className="flex gap-3">
+            <button 
+                onClick={() => { setLoading(true); setError(false); generateSwotData().then(d => { setData(d); setLoading(false); }).catch(() => { setError(true); setLoading(false); }); }}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors"
+            >
+                تلاش مجدد
+            </button>
+            <button onClick={onExit} className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition-colors">
+                بازگشت
+            </button>
+        </div>
       </div>
     );
   }

@@ -19,6 +19,7 @@ interface Props {
 const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [showIntro, setShowIntro] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [scenario, setScenario] = useState<FactFindingScenario | null>(null);
   
   const [currentBudget, setCurrentBudget] = useState(0);
@@ -41,17 +42,32 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
 
   const loadNewScenario = async () => {
       setLoading(true);
+      setError(false);
       setGameState('playing');
       setResult(null);
       setPerformedActions([]);
       setSelectedCategory(null);
       setSelectedSource(null);
       
-      const newScenario = await generateFactFindingScenario();
-      setScenario(newScenario);
-      setCurrentBudget(newScenario.budget);
-      setLoading(false);
+      try {
+        const newScenario = await generateFactFindingScenario();
+        setScenario(newScenario);
+        setCurrentBudget(newScenario.budget);
+        setLoading(false);
+      } catch {
+        setError(true);
+        setLoading(false);
+      }
   };
+
+  // Timeout safety net: if loading takes more than 15 seconds, show error
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      if (loading) { setError(true); setLoading(false); }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const handleAction = (action: FactAction) => {
     if (performedActions.includes(action.id)) return;
@@ -180,7 +196,28 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
       );
   }
 
-  if (!scenario) return <div className="p-8 text-center">خطا در بارگذاری.</div>;
+  if (!scenario) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-slate-100 p-8 text-center animate-fade-in">
+        <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col items-center">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+          <h2 className="text-xl font-bold text-slate-800 mb-2">خطا در بارگذاری</h2>
+          <p className="text-slate-500 mb-6 text-sm">ارتباط با سرور هوش مصنوعی برقرار نشد. لطفاً اتصال اینترنت خود را بررسی کنید.</p>
+          <div className="flex gap-3">
+              <button 
+                  onClick={loadNewScenario}
+                  className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition-colors"
+              >
+                  تلاش مجدد
+              </button>
+              <button onClick={onExit} className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition-colors">
+                  بازگشت
+              </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full bg-slate-100 flex flex-col p-4 md:p-6 overflow-hidden animate-fade-in font-sans">

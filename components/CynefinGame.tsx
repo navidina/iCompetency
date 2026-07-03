@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { CynefinData } from '../types';
 import { generateCynefinData } from '../services/geminiService';
-import { Loader2, Activity, Brain, CheckCircle2, XCircle, ChevronLeft, ShieldAlert, Compass } from 'lucide-react';
+import { Loader2, Activity, Brain, CheckCircle2, XCircle, ChevronLeft, ShieldAlert, Compass, AlertTriangle } from 'lucide-react';
 import { toPersianNum } from '../utils';
 
 interface Props {
@@ -30,15 +30,33 @@ const CynefinGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
 
   useEffect(() => {
-    generateCynefinData().then(d => {
-      setData(d);
-      setLoading(false);
-    });
+    generateCynefinData()
+      .then(d => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, []);
+
+  // Timeout safety net: if loading takes more than 15 seconds, show error
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setError(true);
+        setLoading(false);
+      }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const handleSelect = (optionIdx: number) => {
     if (!data || selectedOptionIndex !== null) return;
@@ -72,7 +90,26 @@ const CynefinGame: React.FC<Props> = ({ onExit, onComplete }) => {
       );
   }
 
-  if (!data) return <div className="text-center p-8 text-red-500">خطا در بارگذاری اطلاعات.</div>;
+  if (!data) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-slate-900 text-white p-8 text-center">
+        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">خطا در بارگذاری</h2>
+        <p className="text-slate-400 mb-6 text-sm">ارتباط با سرور هوش مصنوعی برقرار نشد. لطفاً اتصال اینترنت خود را بررسی کنید.</p>
+        <div className="flex gap-3">
+            <button 
+                onClick={() => { setLoading(true); setError(false); generateCynefinData().then(d => { setData(d); setLoading(false); }).catch(() => { setError(true); setLoading(false); }); }}
+                className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition-colors"
+            >
+                تلاش مجدد
+            </button>
+            <button onClick={onExit} className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">
+                بازگشت
+            </button>
+        </div>
+      </div>
+    );
+  }
 
   if (finished) {
       return (

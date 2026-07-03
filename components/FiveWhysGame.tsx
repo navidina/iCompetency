@@ -14,6 +14,7 @@ const FiveWhysGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [data, setData] = useState<FiveWhysData | null>(null);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [validating, setValidating] = useState(false);
   const [userAnswer, setUserAnswer] = useState('');
   
@@ -24,11 +25,28 @@ const FiveWhysGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [rabbitHoleTime, setRabbitHoleTime] = useState(0);
 
   useEffect(() => {
-    generateFiveWhysData().then(d => {
-      setData(d);
-      setLoading(false);
-    });
+    generateFiveWhysData()
+      .then(d => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, []);
+
+  // Timeout safety net: if loading takes more than 15 seconds, show error
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setError(true);
+        setLoading(false);
+      }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   // Rabbit Hole Timer
   useEffect(() => {
@@ -96,7 +114,26 @@ const FiveWhysGame: React.FC<Props> = ({ onExit, onComplete }) => {
     );
   }
 
-  if (!data) return <div>خطا در بارگذاری.</div>;
+  if (!data) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-slate-900 text-white p-8 text-center">
+        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">خطا در بارگذاری</h2>
+        <p className="text-slate-400 mb-6 text-sm">ارتباط با سرور هوش مصنوعی برقرار نشد. لطفاً اتصال اینترنت خود را بررسی کنید.</p>
+        <div className="flex gap-3">
+            <button 
+                onClick={() => { setLoading(true); setError(false); generateFiveWhysData().then(d => { setData(d); setLoading(false); }).catch(() => { setError(true); setLoading(false); }); }}
+                className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl font-bold transition-colors"
+            >
+                تلاش مجدد
+            </button>
+            <button onClick={onExit} className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">
+                بازگشت
+            </button>
+        </div>
+      </div>
+    );
+  }
 
   if (gameState === 'finished') {
     return (
