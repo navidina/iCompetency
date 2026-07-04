@@ -101,6 +101,37 @@ const VerifiedResume: React.FC<Props> = ({ user, isDarkMode = false }) => {
 
   const handlePrint = () => { window.print(); };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: `کارنامه شایستگی ${user.name}`,
+      text: `کارنامه شایستگی حرفه‌ای ${user.name} در پلتفرم iCompetency`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // User cancelled share - ignore
+      }
+    } else {
+      // Fallback: copy link to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('لینک کپی شد!');
+      } catch {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('لینک کپی شد!');
+      }
+    }
+  };
+
   // Calculate Career Fit
   const careerProfiles = useMemo(() => getCareerFit(user), [user]);
   const bestFit = careerProfiles[0];
@@ -153,7 +184,7 @@ const VerifiedResume: React.FC<Props> = ({ user, isDarkMode = false }) => {
               <button onClick={handlePrint} className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-6 py-3 rounded-2xl font-bold transition-all shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2 active:scale-95 group">
                   <Printer size={18} className="group-hover:text-indigo-500 transition-colors" /> چاپ نسخه کامل
               </button>
-              <button className="bg-indigo-600 dark:bg-slate-700 hover:bg-indigo-700 dark:hover:bg-slate-600 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none flex items-center gap-2 active:scale-95">
+              <button onClick={handleShare} className="bg-indigo-600 dark:bg-slate-700 hover:bg-indigo-700 dark:hover:bg-slate-600 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none flex items-center gap-2 active:scale-95">
                   <Share2 size={18} /> اشتراک‌گذاری
               </button>
           </div>

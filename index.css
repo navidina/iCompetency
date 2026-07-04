@@ -100,7 +100,21 @@ body {
 /* Print Styles */
 @media print {
   @page { size: A4; margin: 0; }
-  body { background: white !important; color: black !important; overflow: visible !important; }
-  body > *:not(.print-container-wrapper) { display: none !important; }
-  .print-container-wrapper { display: block !important; }
+  body { 
+    background: white !important; 
+    color: black !important; 
+    overflow: visible !important; 
+    height: auto !important;
+  }
+  #root, #root > * { 
+    height: auto !important; 
+    overflow: visible !important; 
+    position: static !important;
+  }
+  .print-container-wrapper { 
+    display: block !important; 
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+  }
 }
