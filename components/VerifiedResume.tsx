@@ -1,13 +1,14 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { UserProfile } from '../types';
 import { 
-  ShieldCheck, Printer, Share2, 
+  ShieldCheck, Printer, Share2, Loader2,
   Layers, Calculator, Zap, Box, Compass, Eye, LayoutGrid, 
   Target, Microscope, Sparkles, Hexagon, Briefcase
 } from 'lucide-react';
 import { toPersianNum } from '../utils';
 import { getCareerFit } from '../utils/scoring';
+import { shareResume } from '../utils/pdfGenerator';
 
 interface Props {
   user: UserProfile;
@@ -86,6 +87,8 @@ const ModernGauge: React.FC<{ item: SkillItem }> = ({ item }) => {
 };
 
 const VerifiedResume: React.FC<Props> = ({ user, isDarkMode = false }) => {
+  const [sharing, setSharing] = useState(false);
+
   const cognitiveSkills: SkillItem[] = [
     { code: 'A9', title: 'حافظه جامع', score: user.skills.memory, icon: Layers, method: 'باتری چندگانه (N-Back, Corsi, PAL)', indicator: 'ظرفیت + پایداری + تداعی', color: 'text-pink-600', bg: 'bg-pink-500' },
     { code: 'A10', title: 'هوش محاسباتی', score: user.skills.math, icon: Calculator, method: 'محاسبات سرعت بالا (Speed Arithmetic)', indicator: 'دقت در فشار زمانی', color: 'text-blue-600', bg: 'bg-blue-500' },
@@ -102,33 +105,35 @@ const VerifiedResume: React.FC<Props> = ({ user, isDarkMode = false }) => {
   const handlePrint = () => { window.print(); };
 
   const handleShare = async () => {
-    const shareData = {
-      title: `کارنامه شایستگی ${user.name}`,
-      text: `کارنامه شایستگی حرفه‌ای ${user.name} در پلتفرم iCompetency`,
-      url: window.location.href,
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        // User cancelled share - ignore
+    setSharing(true);
+    try {
+      await shareResume({
+        user,
+        cognitiveSkills: cognitiveSkills.map(s => ({ code: s.code, title: s.title, score: s.score })),
+        bigFiveData: bigFiveData.map(t => ({ title: t.title, score: t.score })),
+        careerProfiles: careerProfiles.map(p => ({ title: p.title, fitScore: p.fitScore })),
+        date: currentDate,
+      });
+    } catch (err) {
+      // Fallback: share link
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `کارنامه شایستگی ${user.name}`,
+            text: `کارنامه شایستگی حرفه‌ای ${user.name} در پلتفرم iCompetency`,
+            url: window.location.href,
+          });
+        } catch { /* cancelled */ }
+      } else {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          alert('لینک کپی شد!');
+        } catch {
+          alert('خطا در اشتراک‌گذاری');
+        }
       }
-    } else {
-      // Fallback: copy link to clipboard
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        alert('لینک کپی شد!');
-      } catch {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = window.location.href;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        alert('لینک کپی شد!');
-      }
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -184,8 +189,9 @@ const VerifiedResume: React.FC<Props> = ({ user, isDarkMode = false }) => {
               <button onClick={handlePrint} className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-6 py-3 rounded-2xl font-bold transition-all shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2 active:scale-95 group">
                   <Printer size={18} className="group-hover:text-indigo-500 transition-colors" /> چاپ نسخه کامل
               </button>
-              <button onClick={handleShare} className="bg-indigo-600 dark:bg-slate-700 hover:bg-indigo-700 dark:hover:bg-slate-600 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none flex items-center gap-2 active:scale-95">
-                  <Share2 size={18} /> اشتراک‌گذاری
+              <button onClick={handleShare} disabled={sharing} className="bg-indigo-600 dark:bg-slate-700 hover:bg-indigo-700 dark:hover:bg-slate-600 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none flex items-center gap-2 active:scale-95 disabled:opacity-50">
+                  {sharing ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
+                  {sharing ? 'در حال ساخت...' : 'اشتراک‌گذاری'}
               </button>
           </div>
       </header>
