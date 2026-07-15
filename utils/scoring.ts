@@ -116,14 +116,17 @@ export const calculateDPrime = (hits: number, targets: number, falseAlarms: numb
 };
 
 /**
- * Calculates Stroop Inhibition Score
- * Score = (1000 / (RT_Incongruent - RT_Congruent)) * Accuracy
- * Higher is better.
+ * Calculates Stroop Inhibition Score on a 0-100 scale.
+ * Score = (1000 / interference_ms) * accuracy * 10, capped at 100.
+ * Higher is better. The scale matches the A14 norm (mean 50, sd 15):
+ * ~200ms interference at 90% accuracy lands near the mean, while the
+ * previous unscaled formula produced 300-600 for typical runs and pinned
+ * every player's T-score at the 80 clamp.
  */
 export const calculateStroopScore = (rtIncongruent: number, rtCongruent: number, accuracy: number): number => {
     // Prevent division by zero or negative interference (which means user is superhuman or data is noisy)
     const interference = Math.max(50, rtIncongruent - rtCongruent); // Minimum 50ms interference assumed
-    return Math.round((1000 / interference) * (accuracy * 100)); // Scale up
+    return Math.min(100, Math.round((1000 / interference) * accuracy * 10));
 };
 
 // --- General Scoring ---
@@ -199,6 +202,9 @@ export interface CareerProfile {
 export const getCareerFit = (user: any): CareerProfile[] => {
     // Default safe values if data missing
     const scores = user.skills || {};
+    // Note: BigFiveGame scores the 'Neuroticism' key so that HIGH = emotionally
+    // stable (calm answers score +2; the radar labels it "ثبات"), so stability
+    // contributes positively below rather than being subtracted.
     const big5 = user.bigFive || { Openness: 50, Conscientiousness: 50, Extraversion: 50, Agreeableness: 50, Neuroticism: 50 };
 
     // Derived Indices (Approximated from raw skills if T-Scores not fully avail)
@@ -210,25 +216,25 @@ export const getCareerFit = (user: any): CareerProfile[] => {
         {
             title: "تحقیق و توسعه (R&D)",
             description: "حل مسائل پیچیده و نوآوری تکنیکال",
-            fitScore: Math.round((analytical * 0.4) + (spatial * 0.2) + (big5.Openness * 0.4)),
+            fitScore: Math.max(0, Math.min(100, Math.round((analytical * 0.4) + (spatial * 0.2) + (big5.Openness * 0.4)))),
             keyTraits: ["تحلیل‌گری بالا", "گشودگی به تجربه", "تجسم فضایی"]
         },
         {
             title: "مدیریت عملیات (Operations)",
             description: "نظم‌دهی، کارایی و مدیریت منابع",
-            fitScore: Math.round((executive * 0.3) + (big5.Conscientiousness * 0.5) + (big5.Neuroticism * -0.2 + 20)), // Low Neuroticism helps
+            fitScore: Math.max(0, Math.min(100, Math.round((executive * 0.3) + (big5.Conscientiousness * 0.5) + (big5.Neuroticism * 0.2)))),
             keyTraits: ["وجدان کاری بالا", "تمرکز اجرایی", "ثبات هیجانی"]
         },
         {
             title: "مدیریت محصول (Product)",
             description: "تعادل بین نیاز کاربر، فنی و بیزنس",
-            fitScore: Math.round((analytical * 0.3) + (big5.Extraversion * 0.3) + (big5.Openness * 0.2) + (big5.Agreeableness * 0.2)),
+            fitScore: Math.max(0, Math.min(100, Math.round((analytical * 0.3) + (big5.Extraversion * 0.3) + (big5.Openness * 0.2) + (big5.Agreeableness * 0.2)))),
             keyTraits: ["جامع‌نگری", "تعامل اجتماعی", "نوآوری"]
         },
         {
             title: "فروش و بازاریابی",
             description: "ارتباط موثر و اقناع",
-            fitScore: Math.round((big5.Extraversion * 0.6) + (big5.Agreeableness * 0.2) + (executive * 0.2)),
+            fitScore: Math.max(0, Math.min(100, Math.round((big5.Extraversion * 0.6) + (big5.Agreeableness * 0.2) + (executive * 0.2)))),
             keyTraits: ["برون‌گرایی بالا", "انرژی اجتماعی", "سرعت پردازش"]
         }
     ];

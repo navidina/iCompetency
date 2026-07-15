@@ -19,6 +19,7 @@ interface Props {
 const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [showIntro, setShowIntro] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [scenario, setScenario] = useState<FactFindingScenario | null>(null);
   
   const [currentBudget, setCurrentBudget] = useState(0);
@@ -28,7 +29,9 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
   
   const [gameState, setGameState] = useState<'playing' | 'result'>('playing');
   const [result, setResult] = useState<{ isWin: boolean; feedback: string; score: number } | null>(null);
-  const [totalScore, setTotalScore] = useState(0);
+  // Best single round counts (matches the server's best-attempt policy).
+  // Summing across replays let users farm an unbounded score by replaying.
+  const [bestScore, setBestScore] = useState(0);
 
   // Initial Scenario Load
   useEffect(() => {
@@ -39,17 +42,32 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
 
   const loadNewScenario = async () => {
       setLoading(true);
+      setError(false);
       setGameState('playing');
       setResult(null);
       setPerformedActions([]);
       setSelectedCategory(null);
       setSelectedSource(null);
       
-      const newScenario = await generateFactFindingScenario();
-      setScenario(newScenario);
-      setCurrentBudget(newScenario.budget);
-      setLoading(false);
+      try {
+        const newScenario = await generateFactFindingScenario();
+        setScenario(newScenario);
+        setCurrentBudget(newScenario.budget);
+        setLoading(false);
+      } catch {
+        setError(true);
+        setLoading(false);
+      }
   };
+
+  // Timeout safety net: if loading takes more than 15 seconds, show error
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      if (loading) { setError(true); setLoading(false); }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const handleAction = (action: FactAction) => {
     if (performedActions.includes(action.id)) return;
@@ -73,14 +91,12 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
 
     if (isWin) {
       sfx.playSuccess();
-      // Efficiency Bonus
-      const efficiency = (currentBudget / scenario.budget) * 30;
       // Information Gathering Bonus (Crucial clues found)
       let crucialFound = 0;
       let totalCrucial = 0;
-      
-      scenario.categories.forEach(cat => 
-        cat.sources.forEach(src => 
+
+      scenario.categories.forEach(cat =>
+        cat.sources.forEach(src =>
             src.actions.forEach(act => {
                 if (act.isCrucial) totalCrucial++;
                 if (act.isCrucial && performedActions.includes(act.id)) crucialFound++;
@@ -89,6 +105,9 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
       );
 
       const investigationBonus = (crucialFound / Math.max(1, totalCrucial)) * 70;
+      // Efficiency only counts when the win is evidence-based: a blind guess
+      // with an untouched budget must not earn the full frugality bonus.
+      const efficiency = crucialFound > 0 ? (currentBudget / scenario.budget) * 30 : 0;
       roundScore = Math.round(efficiency + investigationBonus);
     } else {
       sfx.playError();
@@ -100,7 +119,7 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
       feedback: selectedOption.feedback,
       score: roundScore
     });
-    setTotalScore(prev => prev + roundScore);
+    setBestScore(prev => Math.max(prev, roundScore));
     setGameState('result');
   };
 
@@ -177,10 +196,31 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
       );
   }
 
-  if (!scenario) return <div className="p-8 text-center">خطا در بارگذاری.</div>;
+  if (!scenario) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-slate-100 p-8 text-center animate-fade-in">
+        <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col items-center">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+          <h2 className="text-xl font-bold text-slate-800 mb-2">خطا در بارگذاری</h2>
+          <p className="text-slate-500 mb-6 text-sm">ارتباط با سرور هوش مصنوعی برقرار نشد. لطفاً اتصال اینترنت خود را بررسی کنید.</p>
+          <div className="flex gap-3">
+              <button 
+                  onClick={loadNewScenario}
+                  className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition-colors"
+              >
+                  تلاش مجدد
+              </button>
+              <button onClick={onExit} className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition-colors">
+                  بازگشت
+              </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full bg-slate-100 flex flex-col p-4 md:p-6 overflow-hidden animate-fade-in font-sans">
+    <div className="h-full bg-slate-100 flex flex-col p-4 md:p-6 overflow-y-auto animate-fade-in font-sans pb-20 md:pb-6">
       {/* Top Bar */}
       <div className="flex justify-between items-center mb-4 bg-slate-900 text-white p-4 rounded-2xl shadow-lg">
         <div className="flex items-center gap-4">
@@ -211,10 +251,20 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
                         {result.feedback}
                     </p>
                     {result.isWin && (
-                        <div className="mb-8 flex justify-center gap-4">
-                            <div className="bg-emerald-50 px-4 py-2 rounded-xl text-emerald-700 font-bold border border-emerald-100">
-                                امتیاز: {toPersianNum(result.score)}
+                        <div className="mb-8 flex flex-col items-center gap-2">
+                            <div className="flex justify-center gap-3">
+                                <div className="bg-emerald-50 px-4 py-2 rounded-xl text-emerald-700 font-bold border border-emerald-100">
+                                    امتیاز این دور: {toPersianNum(result.score)}
+                                </div>
+                                <div className="bg-slate-50 px-4 py-2 rounded-xl text-slate-600 font-bold border border-slate-100">
+                                    بهترین امتیاز: {toPersianNum(bestScore)}
+                                </div>
                             </div>
+                            {result.score === 0 && (
+                                <p className="text-xs text-amber-600 font-bold">
+                                    بدون جمع‌آوری سرنخ کلیدی، حدس درست امتیازی ثبت نمی‌کند.
+                                </p>
+                            )}
                         </div>
                     )}
                     <div className="flex flex-col gap-3">
@@ -225,8 +275,8 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
                             <RefreshCw size={18} />
                             بررسی مجدد پرونده
                         </button>
-                        <button 
-                            onClick={() => onComplete(totalScore)}
+                        <button
+                            onClick={() => onComplete(bestScore)}
                             className="w-full py-4 rounded-xl font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 transition-colors"
                         >
                             پایان و خروج
@@ -235,7 +285,7 @@ const FactFindingGame: React.FC<Props> = ({ onExit, onComplete }) => {
               </div>
           </div>
       ) : (
-          <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-y-auto lg:overflow-hidden pb-4">
+          <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-visible lg:overflow-hidden pb-4 min-h-0">
               
               {/* LEFT PANE: DIRECTORY */}
               <div className="lg:w-1/4 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:overflow-hidden shrink-0 min-h-[300px] lg:min-h-0">

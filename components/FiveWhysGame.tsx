@@ -14,20 +14,39 @@ const FiveWhysGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [data, setData] = useState<FiveWhysData | null>(null);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [validating, setValidating] = useState(false);
   const [userAnswer, setUserAnswer] = useState('');
   
   const [gameState, setGameState] = useState<'playing' | 'rabbit_hole' | 'finished'>('playing');
   const [feedback, setFeedback] = useState<string>('');
+  const [serviceNotice, setServiceNotice] = useState<string>('');
   const [score, setScore] = useState(0);
   const [rabbitHoleTime, setRabbitHoleTime] = useState(0);
 
   useEffect(() => {
-    generateFiveWhysData().then(d => {
-      setData(d);
-      setLoading(false);
-    });
+    generateFiveWhysData()
+      .then(d => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, []);
+
+  // Timeout safety net: if loading takes more than 15 seconds, show error
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setError(true);
+        setLoading(false);
+      }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   // Rabbit Hole Timer
   useEffect(() => {
@@ -43,18 +62,30 @@ const FiveWhysGame: React.FC<Props> = ({ onExit, onComplete }) => {
 
   const handleSubmit = async () => {
       if (!userAnswer.trim() || !data) return;
-      
+
       setValidating(true);
+      setServiceNotice('');
       const levelData = data.levels[currentLevel];
-      
-      // AI Semantic Check
-      const result = await validateTextAnswer(
-          userAnswer, 
-          levelData.idealAnswer, 
-          `Problem: ${data.problemStatement}. Previous Cause: ${currentLevel > 0 ? data.levels[currentLevel-1].idealAnswer : 'Initial Problem'}`
-      );
+
+      // AI Semantic Check. A grader outage (fallback flag or network error)
+      // must not be scored as a wrong answer - no rabbit hole, no penalty.
+      let result;
+      try {
+          result = await validateTextAnswer(
+              userAnswer,
+              levelData.idealAnswer,
+              `Problem: ${data.problemStatement}. Previous Cause: ${currentLevel > 0 ? data.levels[currentLevel-1].idealAnswer : 'Initial Problem'}`
+          );
+      } catch {
+          result = { isCorrect: false, feedback: '', similarity: 0, serviceUnavailable: true };
+      }
 
       setValidating(false);
+
+      if (result.serviceUnavailable) {
+          setServiceNotice('سرویس ارزیابی هوش مصنوعی موقتاً در دسترس نیست؛ پاسخ شما بررسی نشد. لطفاً دوباره تلاش کنید.');
+          return;
+      }
 
       if (result.isCorrect) {
           setScore(s => s + 20);
@@ -83,7 +114,26 @@ const FiveWhysGame: React.FC<Props> = ({ onExit, onComplete }) => {
     );
   }
 
-  if (!data) return <div>خطا در بارگذاری.</div>;
+  if (!data) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-slate-900 text-white p-8 text-center">
+        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">خطا در بارگذاری</h2>
+        <p className="text-slate-400 mb-6 text-sm">ارتباط با سرور هوش مصنوعی برقرار نشد. لطفاً اتصال اینترنت خود را بررسی کنید.</p>
+        <div className="flex gap-3">
+            <button 
+                onClick={() => { setLoading(true); setError(false); generateFiveWhysData().then(d => { setData(d); setLoading(false); }).catch(() => { setError(true); setLoading(false); }); }}
+                className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl font-bold transition-colors"
+            >
+                تلاش مجدد
+            </button>
+            <button onClick={onExit} className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">
+                بازگشت
+            </button>
+        </div>
+      </div>
+    );
+  }
 
   if (gameState === 'finished') {
     return (
@@ -111,7 +161,7 @@ const FiveWhysGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const levelData = data.levels[currentLevel];
 
   return (
-    <div className={`h-full flex flex-col p-6 overflow-y-auto transition-colors duration-500 ${gameState === 'rabbit_hole' ? 'bg-red-950' : 'bg-slate-900'} text-slate-100`}>
+    <div className={`h-full flex flex-col p-6 pb-24 md:pb-6 overflow-y-auto transition-colors duration-500 ${gameState === 'rabbit_hole' ? 'bg-red-950' : 'bg-slate-900'} text-slate-100`}>
       
       {/* Header */}
       <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
@@ -168,6 +218,12 @@ const FiveWhysGame: React.FC<Props> = ({ onExit, onComplete }) => {
             </div>
         ) : (
             <div className="mt-auto">
+                {serviceNotice && (
+                    <div className="mb-4 flex items-start gap-2 bg-amber-500/10 border border-amber-500/40 text-amber-300 text-sm font-bold rounded-xl p-4 animate-fade-in">
+                        <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                        {serviceNotice}
+                    </div>
+                )}
                 <div className="relative">
                     <textarea
                         value={userAnswer}

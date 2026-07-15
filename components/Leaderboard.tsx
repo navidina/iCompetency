@@ -86,7 +86,7 @@ const Leaderboard: React.FC<Props> = ({ user }) => {
                                 <div className="font-black text-lg text-slate-700">{u.totalXp.toLocaleString('fa-IR')} XP</div>
                                 {u.rank <= 3 && (
                                     <div className="flex justify-end items-center gap-1 text-xs font-bold text-emerald-500 animate-pulse">
-                                        <TrendingUp size={12} /> پیشتاز
+                                        <TrendingUp size={12} className="rtl:scale-x-[-1]" /> پیشتاز
                                     </div>
                                 )}
                             </div>

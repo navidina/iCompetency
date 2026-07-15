@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { AppView, JourneyNode } from '../types';
 import { 
   Layers, Calculator, Zap, Box, Compass, Eye, LayoutGrid, 
-  Check, Lock, MapPin, Search, Cpu, Server, Users, X, PlayCircle, Info
+  Check, Lock, MapPin, Search, Cpu, Server, Users, X, PlayCircle
 } from 'lucide-react';
 import { toPersianNum } from '../utils';
 
@@ -220,8 +220,57 @@ const JourneyMap: React.FC<Props> = ({ unlockedNodes, completedNodes, onSelectNo
             <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-1 tracking-wide">مسیر ارزیابی شایستگی‌های شناختی و رفتاری</p>
         </div>
 
-        {/* Map Container */}
-        <div ref={scrollContainerRef} className="relative w-full flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar" dir="ltr">
+        {/* Mobile Journey List */}
+        <div className="md:hidden flex-1 overflow-y-auto pb-24 px-4 pt-4">
+            <div className="space-y-4">
+                {nodesList.map((node, index) => {
+                    const isUnlocked = unlockedNodes.includes(node.id);
+                    const isCompleted = completedNodes.includes(node.id);
+                    const isCurrent = activeNodeId === node.id;
+                    
+                    return (
+                        <div key={node.id} className="relative">
+                            {/* Connecting line */}
+                            {index < nodesList.length - 1 && (
+                                <div className="absolute top-full left-8 w-0.5 h-4 bg-slate-200 dark:bg-slate-700"></div>
+                            )}
+                            
+                            <button
+                                onClick={() => isUnlocked && handleNodeClick(node)}
+                                disabled={!isUnlocked}
+                                className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+                                    isCurrent 
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-md' 
+                                        : isCompleted 
+                                            ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800' 
+                                            : isUnlocked 
+                                                ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:shadow-md' 
+                                                : 'bg-slate-100/50 dark:bg-slate-900/50 border-slate-200/50 dark:border-slate-800 opacity-60'
+                                }`}
+                            >
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                                    isCompleted ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 
+                                    isCurrent ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' : 
+                                    'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                }`}>
+                                    {isCompleted ? <Check size={22} /> : !isUnlocked ? <Lock size={18} /> : <node.icon size={22} />}
+                                </div>
+                                <div className="flex-1 text-right">
+                                    <h3 className={`font-bold text-sm ${isCurrent ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-200'}`}>{node.title}</h3>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{node.description}</p>
+                                </div>
+                                {isCurrent && (
+                                    <span className="text-[9px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full shrink-0">فعلی</span>
+                                )}
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+
+        {/* Map Container (Desktop only) */}
+        <div ref={scrollContainerRef} className="hidden md:block relative w-full flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar" dir="ltr">
             
             <div 
                 className={`relative h-full min-w-[1200px] transition-all duration-700 ease-in-out transform ${focusedNode ? 'scale-[1.5] blur-md opacity-20 pointer-events-none' : 'scale-100 opacity-100'}`}
@@ -385,7 +434,40 @@ const JourneyMap: React.FC<Props> = ({ unlockedNodes, completedNodes, onSelectNo
                     </button>
                 </div>
 
-                <div className="flex-1 flex items-center justify-start md:justify-center w-full overflow-x-auto custom-scrollbar">
+                {/* Mobile: vertical subnode list */}
+                <div className="md:hidden flex-1 overflow-y-auto px-6 pb-24">
+                    <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">
+                        این آزمون شامل {toPersianNum(focusedNode.subNodes.length)} بخش متوالی است:
+                    </p>
+                    <div className="space-y-3 max-w-sm mx-auto mb-8">
+                        {focusedNode.subNodes.map((sub, idx) => (
+                            <div
+                                key={sub.id}
+                                className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
+                                    {toPersianNum(idx + 1)}
+                                </div>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-700 ${sub.color} shrink-0`}>
+                                    <sub.icon size={20} />
+                                </div>
+                                <div className="flex-1 text-right">
+                                    <h4 className="font-bold text-sm text-slate-700 dark:text-slate-200">{sub.title}</h4>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400">{sub.description}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <button
+                        onClick={() => onSelectNode(focusedNode.view)}
+                        className="w-full max-w-sm mx-auto block py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-lg shadow-blue-500/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                        <PlayCircle size={22} /> شروع آزمون جامع
+                    </button>
+                </div>
+
+                {/* Desktop: horizontal timeline */}
+                <div className="hidden md:flex flex-1 items-center justify-center w-full overflow-x-auto custom-scrollbar">
                     <div className="flex items-center gap-0 px-12 pb-12 min-w-[max-content]">
                         
                         <div className="flex flex-col items-center gap-3 opacity-50">
@@ -430,10 +512,13 @@ const JourneyMap: React.FC<Props> = ({ unlockedNodes, completedNodes, onSelectNo
                     </div>
                 </div>
 
-                <div className="p-8 text-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold">
-                        <Info size={14} /> برای تکمیل این مرحله، تمام آزمون‌های بالا را انجام دهید
-                    </div>
+                <div className="hidden md:block p-8 text-center">
+                    <button 
+                        onClick={() => onSelectNode(focusedNode.view)}
+                        className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold transition-colors shadow-lg shadow-blue-500/30 active:scale-95"
+                    >
+                        <PlayCircle size={18} /> شروع آزمون جامع (شامل {toPersianNum(focusedNode.subNodes?.length || 0)} بخش)
+                    </button>
                 </div>
 
             </div>

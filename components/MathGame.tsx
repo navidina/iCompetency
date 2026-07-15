@@ -161,21 +161,29 @@ const MathGame: React.FC<Props> = ({ onExit, onComplete }) => {
       
       setStreak(s => s + 1);
       
+      let nextLevel = level;
       if (streak > 0 && streak % 2 === 0) {
-         setLevel(l => Math.min(10, l + 1));
+         nextLevel = Math.min(10, level + 1);
+         setLevel(nextLevel);
       }
+
+      setTimeout(() => {
+        setFeedback(null);
+        generateQuestion(nextLevel);
+      }, 400);
     } else {
       sfx.playError();
       setFeedback('wrong');
       setTimeLeft(t => Math.max(0, t - 2)); // V2.0 Penalty: -2s
       setStreak(0);
-      setLevel(l => Math.max(1, l - 1));
-    }
+      const nextLevel = Math.max(1, level - 1);
+      setLevel(nextLevel);
 
-    setTimeout(() => {
-      setFeedback(null);
-      generateQuestion(level); 
-    }, 400);
+      setTimeout(() => {
+        setFeedback(null);
+        generateQuestion(nextLevel);
+      }, 400);
+    }
   };
 
   const handleNumpad = (num: number) => {

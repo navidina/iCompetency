@@ -9,6 +9,7 @@ import { calculateDPrime } from '../utils/scoring';
 import { UserProfile } from '../types';
 import { sfx } from '../services/audioService';
 import GameResultCard from './GameResultCard';
+import GameShell from './GameShell';
 
 interface Props {
   onExit: () => void;
@@ -96,8 +97,9 @@ const CorsiGame: React.FC<{ onFinish: (span: number, rawScore: number) => void }
         
         if (newSuccess >= 2) {
             setSuccessCount(0);
-            setLevel(l => l + 1);
-            setTimeout(() => startRound(level + 1), 1000);
+            const newLevel = level + 1;
+            setLevel(newLevel);
+            setTimeout(() => startRound(newLevel), 1000);
         } else {
             setTimeout(() => startRound(level), 1000);
         }
@@ -133,7 +135,7 @@ const CorsiGame: React.FC<{ onFinish: (span: number, rawScore: number) => void }
                     { label: 'ظرفیت حافظه', value: toPersianNum(maxSpan) },
                     { label: 'امتیاز کل', value: toPersianNum(finalScore) },
                 ]}
-                onRetry={() => { setLevel(2); setLives(3); setMaxSpan(0); setErrors(0); startRound(2); }}
+                onRetry={() => { setLevel(2); setLives(3); setMaxSpan(0); setErrors(0); setTotalCorrect(0); setSuccessCount(0); startRound(2); }}
                 onComplete={() => onFinish(maxSpan, finalScore)}
             />
         );
@@ -176,7 +178,9 @@ const PairedGame: React.FC<{ onFinish: (accuracy: number, rawScore: number) => v
     const [correctCount, setCorrectCount] = useState(0);
     const [totalTests, setTotalTests] = useState(0);
 
-    const LEVELS = [4, 6, 8, 10];
+    // Max level is capped by COLORS.length: with more pairs than colors, two
+    // icons would share a color and the recall task becomes inconsistent.
+    const LEVELS = [4, 6, 8];
     const COLORS = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500'];
     const ICONS = ['🏠', '🚗', '💻', '⌚', '📷', '🚲', '🚀', '☂️', '🍔', '🎸', '⚽', '🔑'];
 
@@ -295,15 +299,15 @@ const PairedGame: React.FC<{ onFinish: (accuracy: number, rawScore: number) => v
     );
 };
 
-// --- SUB-GAME 3: N-BACK (Working Memory - Precise Timing) ---
+// --- SUB-GAME 3: N-BACK (Working Memory) ---
 const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void }> = ({ onFinish }) => {
     const [n, setN] = useState(1);
     const [sequence, setSequence] = useState<string[]>([]);
-    const [current, setCurrent] = useState('');
+    const sequenceRef = useRef<string[]>([]);
     const [showStimulus, setShowStimulus] = useState(false);
     const [gameOver, setGameOver] = useState(false);
     const [trials, setTrials] = useState(0);
-    
+
     // Stats for d-prime
     const [hits, setHits] = useState(0); // Correct matches
     const [targets, setTargets] = useState(0); // Total actual matches
@@ -315,91 +319,64 @@ const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void 
     const POOL = ['A', 'B', 'C', 'D', 'H', 'K', 'X', 'Y'];
     const ISI = 2500; // Inter-Stimulus Interval (ms)
 
-    // Precise Timing Refs
-    const startTimeRef = useRef<number | null>(null);
-    const frameRef = useRef<number | null>(null);
-    const trialCountRef = useRef(0);
+    const current = sequence.length > 0 ? sequence[sequence.length - 1] : '';
 
-    // Game Logic function
-    const nextTrial = () => {
-        if (trialCountRef.current >= MAX_TRIALS) {
-            setGameOver(true); // Triggers logic in useEffect
-            return;
-        }
-
-        // Generate Next
-        const seq = sequence; // Note: In RAF loop, state might be stale if not careful. 
-        // We need to use refs for sequence if possible, or functional updates. 
-        // To simplify, we will stick to functional updates in state setter and assume 'sequence' state is close enough for N-Back logic inside this scope
-        // Actually, 'sequence' state is updated on render.
-    };
-
-    // Re-implementing with setInterval but precise timestamp check or just simple useEffect with functional updates
-    // The previous implementation was using setInterval inside useEffect.
-    // The critique was about setInterval drifting.
-    // Using a self-correcting timeout or RAF is better.
-
+    // Trial loop chained on the `trials` state: each run schedules exactly one
+    // trial, so the level-up/game-over check always sees the live count. (The
+    // previous self-scheduling timeout closed over `trials` from mount, so the
+    // check never fired and the game could not end.)
     useEffect(() => {
         if (gameOver) return;
 
-        let expectedTime = performance.now() + ISI;
-        
-        const tick = () => {
-            const now = performance.now();
-            const drift = now - expectedTime;
-            
-            if (trials >= MAX_TRIALS) {
-                if (n < 2) { 
-                    setN(prev => prev + 1);
-                    setTrials(0);
-                    setSequence([]);
-                    expectedTime = performance.now() + ISI; // Reset timer
-                } else {
-                    setGameOver(true);
-                    return; // Stop loop
-                }
+        if (trials >= MAX_TRIALS) {
+            if (n < 2) {
+                setN(2);
+                setTrials(0);
+                setSequence([]);
             } else {
-                // Generate Next Item
-                setSequence(prevSeq => {
-                    const shouldMatch = Math.random() < 0.3 && prevSeq.length >= n;
-                    let newItem = '';
-                    
-                    if (shouldMatch) {
-                        newItem = prevSeq[prevSeq.length - n];
-                        setTargets(t => t + 1);
-                    } else {
-                        newItem = POOL[Math.floor(Math.random() * POOL.length)];
-                        if (prevSeq.length >= n && newItem === prevSeq[prevSeq.length - n]) {
-                            newItem = POOL.find(x => x !== newItem) || 'A';
-                        }
-                        setNonTargets(nt => nt + 1);
-                    }
-                    
-                    setCurrent(newItem);
-                    setShowStimulus(true);
-                    return [...prevSeq, newItem];
-                });
+                setGameOver(true);
+            }
+            return;
+        }
 
-                setTrials(t => t + 1);
-                setUserResponded(false);
-                setTimeout(() => setShowStimulus(false), 1500);
+        const timeoutId = setTimeout(() => {
+            // `sequence` is fresh here: this effect re-runs per trial.
+            const shouldMatch = Math.random() < 0.3 && sequence.length >= n;
+            let newItem = '';
+
+            if (shouldMatch) {
+                newItem = sequence[sequence.length - n];
+                setTargets(t => t + 1);
+            } else {
+                newItem = POOL[Math.floor(Math.random() * POOL.length)];
+                if (sequence.length >= n && newItem === sequence[sequence.length - n]) {
+                    newItem = POOL.find(x => x !== newItem) || 'A';
+                }
+                setNonTargets(nt => nt + 1);
             }
 
-            expectedTime += ISI;
-            // Schedule next tick correcting for drift
-            timeoutId = setTimeout(tick, Math.max(0, ISI - drift));
-        };
-
-        let timeoutId = setTimeout(tick, 100); // Start immediately-ish
+            setSequence(prev => [...prev, newItem]);
+            sequenceRef.current = [...sequenceRef.current, newItem];
+            setUserResponded(false);
+            setShowStimulus(true);
+            setTrials(t => t + 1);
+        }, trials === 0 ? 600 : ISI);
 
         return () => clearTimeout(timeoutId);
-    }, [n, gameOver]); // Only restart loop if N changes or Game Over
+    }, [trials, n, gameOver]);
+
+    // Hide the stimulus 1.5s after each onset
+    useEffect(() => {
+        if (!showStimulus) return;
+        const t = setTimeout(() => setShowStimulus(false), 1500);
+        return () => clearTimeout(t);
+    }, [showStimulus, trials]);
 
     const handleMatch = () => {
         if (!showStimulus || sequence.length <= n || userResponded) return;
         
         setUserResponded(true);
-        const target = sequence[sequence.length - 1 - n];
+        const target = sequenceRef.current[sequenceRef.current.length - 1 - n];
         
         if (current === target) {
             setHits(h => h + 1);
@@ -415,16 +392,16 @@ const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void 
         const finalScore = Math.round((dPrime * 20) + (n * 15));
 
         return (
-            <GameResultCard 
+            <GameResultCard
                 title="رادار تمرکز (N-Back)"
-                rawScore={dPrime * 20} 
+                rawScore={dPrime} // A9c norm is on the raw d' scale (mean 2.5, sd 1.0)
                 scoreKey="A9c"
                 metrics={[
                     { label: 'شاخص d-prime', value: dPrime.toFixed(2), subtext: 'تفکیک پذیری' },
                     { label: 'ضربه (Hits)', value: hits },
                     { label: 'خطای مثبت', value: falseAlarms },
                 ]}
-                onRetry={() => { setN(1); setHits(0); setFalseAlarms(0); setTargets(0); setNonTargets(0); setGameOver(false); setSequence([]); setTrials(0); }}
+                onRetry={() => { setN(1); setHits(0); setFalseAlarms(0); setTargets(0); setNonTargets(0); setGameOver(false); setSequence([]); sequenceRef.current = []; setTrials(0); setUserResponded(false); setShowStimulus(false); }}
                 onComplete={() => onFinish(finalScore, dPrime)}
             />
         );
@@ -434,6 +411,9 @@ const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void 
         <div className="flex flex-col items-center justify-center h-full relative bg-slate-900 text-white">
             <div className="absolute top-4 left-4 bg-slate-800 px-3 py-1 rounded-full text-sm font-bold">
                 Level: {n}-Back
+            </div>
+            <div className="absolute top-4 right-14 bg-slate-800 px-3 py-1 rounded-full text-sm font-bold text-slate-300 tabular-nums">
+                آزمایه {toPersianNum(Math.min(trials, MAX_TRIALS))} / {toPersianNum(MAX_TRIALS)}
             </div>
             
             <div className={`text-9xl font-black transition-all duration-200 ${showStimulus ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
@@ -453,10 +433,18 @@ const NBackGame: React.FC<{ onFinish: (score: number, rawScore: number) => void 
 
 // --- MAIN WRAPPER ---
 const MemoryGame: React.FC<Props> = ({ onExit, onComplete, onStepComplete }) => {
-    const [gameStage, setGameStage] = useState<'intro' | 'corsi' | 'paired' | 'nback'>('intro');
+    const [gameState, setGameState] = useState<'intro' | 'playing' | 'paused' | 'finished'>('intro');
+    const [gameStage, setGameStage] = useState<'corsi' | 'paired' | 'nback'>('corsi');
     
     // Store raw scores for T-Score calculation
     const [rawScores, setRawScores] = useState({ corsi: 0, paired: 0, nback: 0 });
+
+    // When GameShell transitions to 'playing', start from corsi
+    useEffect(() => {
+        if (gameState === 'playing') {
+            setGameStage('corsi');
+        }
+    }, [gameState]);
 
     const handleCorsiFinish = (span: number, score: number) => {
         setRawScores(prev => ({ ...prev, corsi: span }));
@@ -477,34 +465,28 @@ const MemoryGame: React.FC<Props> = ({ onExit, onComplete, onStepComplete }) => 
         onComplete(score, finalRawScores);
     };
 
-    if (gameStage === 'intro') {
-        return (
-            <div className="h-full flex flex-col items-center justify-center bg-slate-50 p-8 text-center">
-                <div className="w-24 h-24 bg-indigo-100 rounded-3xl flex items-center justify-center text-indigo-600 mb-6 shadow-lg">
-                    <Database size={48} />
-                </div>
-                <h1 className="text-3xl font-black text-slate-800 mb-4">آزمون جامع حافظه (A9)</h1>
-                <p className="text-slate-600 max-w-md mb-8 leading-relaxed">
-                    این آزمون شامل ۳ بخش است: <br/>
-                    ۱. <strong>شبکه امنیتی:</strong> حافظه دیداری (تکرار الگو)<br/>
-                    ۲. <strong>جفت‌های پنهان:</strong> حافظه تداعی‌گر (ارتباط آیکون و رنگ)<br/>
-                    ۳. <strong>رادار تمرکز:</strong> حافظه فعال (N-Back)
-                </p>
-                <button onClick={() => setGameStage('corsi')} className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-xl">
-                    شروع آزمون
-                </button>
-            </div>
-        );
-    }
-
     return (
-        <div className="h-full w-full relative overflow-hidden bg-white">
-            <button onClick={onExit} className="absolute top-4 right-4 z-50 p-2 text-slate-400 hover:text-slate-600"><XCircle /></button>
-            
-            {gameStage === 'corsi' && <CorsiGame onFinish={handleCorsiFinish} />}
-            {gameStage === 'paired' && <PairedGame onFinish={handlePairedFinish} />}
-            {gameStage === 'nback' && <NBackGame onFinish={handleNBackFinish} />}
-        </div>
+        <GameShell
+            title="آزمون جامع حافظه (A9)"
+            description="این آزمون شامل ۳ بخش است: حافظه دیداری، حافظه تداعی‌گر، و حافظه فعال."
+            instructions={[
+                "بخش ۱: الگوی بلوک‌ها را تماشا و تکرار کنید.",
+                "بخش ۲: جفت‌های آیکون-رنگ را حفظ کنید.",
+                "بخش ۳: تطابق حروف با N مرحله قبل را تشخیص دهید."
+            ]}
+            icon={<Database />}
+            stats={{ score: 0 }}
+            onExit={onExit}
+            gameState={gameState}
+            setGameState={setGameState}
+            colorTheme="emerald"
+        >
+            <div className="h-full w-full relative overflow-hidden">
+                {gameStage === 'corsi' && <CorsiGame onFinish={handleCorsiFinish} />}
+                {gameStage === 'paired' && <PairedGame onFinish={handlePairedFinish} />}
+                {gameStage === 'nback' && <NBackGame onFinish={handleNBackFinish} />}
+            </div>
+        </GameShell>
     );
 };
 

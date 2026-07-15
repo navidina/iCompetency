@@ -468,6 +468,14 @@ const RadarChart = ({ scores }: { scores: Record<string, number> }) => {
   );
 };
 
+const TRAIT_CONFIG: Record<string, { label: string; icon: typeof Hexagon }> = {
+  Openness: { label: 'گشودگی به تجربه (Openness)', icon: Eye },
+  Conscientiousness: { label: 'وجدان کاری (Conscientiousness)', icon: Database },
+  Extraversion: { label: 'برون‌گرایی (Extraversion)', icon: Rocket },
+  Agreeableness: { label: 'توافق‌پذیری (Agreeableness)', icon: HeartHandshake },
+  Neuroticism: { label: 'ثبات هیجانی (Emotional Stability)', icon: ShieldAlert },
+};
+
 // Fisher-Yates Shuffle
 function shuffleArray<T>(array: T[]): T[] {
   const newArr = [...array];
@@ -559,7 +567,7 @@ const BigFiveGame: React.FC<Props> = ({ onExit, onComplete }) => {
 
   if (gameState === 'results') {
       return (
-        <div className="h-full bg-slate-950 text-white overflow-y-auto custom-scrollbar p-6 md:p-8 animate-fade-in-up">
+        <div className="h-full bg-slate-950 text-white overflow-y-auto custom-scrollbar p-6 md:p-8 pb-24 md:pb-8 animate-fade-in-up">
             <div className="max-w-5xl mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-white/10 pb-6 gap-4">
                     <div>
@@ -578,15 +586,7 @@ const BigFiveGame: React.FC<Props> = ({ onExit, onComplete }) => {
                     <div className="lg:col-span-7 space-y-3">
                         {Object.entries(finalScores).map(([trait, sVal], idx) => {
                              const score = sVal as number;
-                             let label = trait;
-                             let icon = Hexagon;
-                             if(trait === 'Openness') label = 'گشودگی به تجربه (Openness)'; icon = Eye;
-                             if(trait === 'Conscientiousness') label = 'وجدان کاری (Conscientiousness)'; icon = Database;
-                             if(trait === 'Extraversion') label = 'برون‌گرایی (Extraversion)'; icon = Rocket;
-                             if(trait === 'Agreeableness') label = 'توافق‌پذیری (Agreeableness)'; icon = HeartHandshake;
-                             if(trait === 'Neuroticism') label = 'ثبات هیجانی (Emotional Stability)'; icon = ShieldAlert;
-                             
-                             const Icon = icon;
+                             const { label, icon: Icon } = TRAIT_CONFIG[trait] ?? { label: trait, icon: Hexagon };
                              return (
                                 <div key={trait} className="bg-slate-800/50 p-4 rounded-2xl border border-white/5 flex items-center gap-4 hover:bg-slate-800 transition-colors">
                                     <div className="p-3 rounded-xl bg-slate-900 text-slate-400 border border-slate-700"><Icon size={20} /></div>

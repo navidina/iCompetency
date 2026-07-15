@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { CynefinData } from '../types';
 import { generateCynefinData } from '../services/geminiService';
-import { Loader2, Activity, Brain, CheckCircle2, XCircle, ChevronLeft, ShieldAlert } from 'lucide-react';
+import { Loader2, Activity, Brain, CheckCircle2, XCircle, ChevronLeft, ShieldAlert, Compass, AlertTriangle } from 'lucide-react';
 import { toPersianNum } from '../utils';
 
 interface Props {
@@ -10,20 +10,53 @@ interface Props {
   onComplete: (score: number) => void;
 }
 
+// The AI generates a correctDomain per scenario; teach it after each answer
+// with the domain's canonical sense/analyze/probe/act response pattern.
+const DOMAIN_INFO: Record<string, { label: string; desc: string }> = {
+  simple: { label: 'ساده / بدیهی (Clear)', desc: 'رابطه علت و معلول برای همه روشن است: حس کن، دسته‌بندی کن، پاسخ بده — بهترین روش (Best Practice) را اجرا کن.' },
+  obvious: { label: 'ساده / بدیهی (Clear)', desc: 'رابطه علت و معلول برای همه روشن است: حس کن، دسته‌بندی کن، پاسخ بده — بهترین روش (Best Practice) را اجرا کن.' },
+  clear: { label: 'ساده / بدیهی (Clear)', desc: 'رابطه علت و معلول برای همه روشن است: حس کن، دسته‌بندی کن، پاسخ بده — بهترین روش (Best Practice) را اجرا کن.' },
+  complicated: { label: 'پیچیده (Complicated)', desc: 'رابطه علت و معلول با تحلیل کارشناسی کشف می‌شود: حس کن، تحلیل کن، پاسخ بده — روش خوب (Good Practice) با کمک خبره.' },
+  complex: { label: 'پیچیده پویا (Complex)', desc: 'علت و معلول فقط در نگاه به گذشته معلوم می‌شود: بیازما (Probe)، حس کن، پاسخ بده — آزمایش‌های امن برای شکست.' },
+  chaotic: { label: 'آشوبناک (Chaotic)', desc: 'رابطه علت و معلولی در کار نیست: اول عمل کن تا ثبات برقرار شود، بعد حس کن و پاسخ بده.' },
+  disorder: { label: 'بی‌نظمی (Disorder)', desc: 'هنوز معلوم نیست در کدام دامنه هستید — اول موقعیت را به یکی از چهار دامنه دیگر تجزیه کنید.' },
+};
+
+const domainInfoFor = (domain: string) =>
+  DOMAIN_INFO[domain.trim().toLowerCase()] ?? { label: domain, desc: 'الگوی واکنش مناسب این دامنه را مرور کنید.' };
+
 const CynefinGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [data, setData] = useState<CynefinData | null>(null);
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
 
   useEffect(() => {
-    generateCynefinData().then(d => {
-      setData(d);
-      setLoading(false);
-    });
+    generateCynefinData()
+      .then(d => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, []);
+
+  // Timeout safety net: if loading takes more than 15 seconds, show error
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setError(true);
+        setLoading(false);
+      }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const handleSelect = (optionIdx: number) => {
     if (!data || selectedOptionIndex !== null) return;
@@ -57,7 +90,26 @@ const CynefinGame: React.FC<Props> = ({ onExit, onComplete }) => {
       );
   }
 
-  if (!data) return <div className="text-center p-8 text-red-500">خطا در بارگذاری اطلاعات.</div>;
+  if (!data) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-slate-900 text-white p-8 text-center">
+        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">خطا در بارگذاری</h2>
+        <p className="text-slate-400 mb-6 text-sm">ارتباط با سرور هوش مصنوعی برقرار نشد. لطفاً اتصال اینترنت خود را بررسی کنید.</p>
+        <div className="flex gap-3">
+            <button 
+                onClick={() => { setLoading(true); setError(false); generateCynefinData().then(d => { setData(d); setLoading(false); }).catch(() => { setError(true); setLoading(false); }); }}
+                className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition-colors"
+            >
+                تلاش مجدد
+            </button>
+            <button onClick={onExit} className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">
+                بازگشت
+            </button>
+        </div>
+      </div>
+    );
+  }
 
   if (finished) {
       return (
@@ -86,7 +138,7 @@ const CynefinGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const progress = ((index + 1) / data.scenarios.length) * 100;
 
   return (
-    <div className="h-full bg-slate-950 text-white flex flex-col overflow-hidden font-sans">
+    <div className="h-full bg-slate-950 text-white flex flex-col overflow-hidden font-sans pb-20 md:pb-0">
         
         {/* Progress Line */}
         <div className="w-full h-1 bg-slate-900">
@@ -109,7 +161,7 @@ const CynefinGame: React.FC<Props> = ({ onExit, onComplete }) => {
             </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-4xl mx-auto w-full">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-4xl mx-auto w-full min-h-0">
             
             {/* Scenario Card */}
             <div className="bg-slate-900/50 border border-white/10 rounded-3xl p-6 md:p-8 mb-8 relative overflow-hidden animate-slide-in-right shadow-2xl">
@@ -125,6 +177,21 @@ const CynefinGame: React.FC<Props> = ({ onExit, onComplete }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Domain Teaching Card - shown once answered */}
+            {selectedOptionIndex !== null && (
+                <div className="mb-6 bg-indigo-950/60 border border-indigo-500/30 rounded-2xl p-5 flex items-start gap-4 animate-fade-in-up">
+                    <div className="p-2 bg-indigo-500/20 rounded-lg shrink-0">
+                        <Compass className="text-indigo-400" size={20} />
+                    </div>
+                    <div>
+                        <div className="text-xs font-bold text-indigo-300 uppercase tracking-widest mb-1">
+                            دامنه صحیح: <span className="text-white">{domainInfoFor(scenario.correctDomain).label}</span>
+                        </div>
+                        <p className="text-sm text-slate-300 leading-relaxed">{domainInfoFor(scenario.correctDomain).desc}</p>
+                    </div>
+                </div>
+            )}
 
             {/* Options */}
             <div className="grid grid-cols-1 gap-4">

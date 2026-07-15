@@ -2,8 +2,27 @@
 import React, { useState, useEffect } from 'react';
 import { SwotData } from '../types';
 import { generateSwotData } from '../services/geminiService';
-import { Loader2, Building2, BrainCircuit, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Building2, BrainCircuit, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { toPersianNum } from '../utils';
+import { sfx } from '../services/audioService';
+
+function normalizeCategory(raw: string): 'S' | 'W' | 'O' | 'T' {
+  const val = raw.trim().toUpperCase();
+  // Single letter match
+  if (val === 'S' || val === 'W' || val === 'O' || val === 'T') return val;
+  // English full-word match
+  if (val.startsWith('STRENGTH')) return 'S';
+  if (val.startsWith('WEAKNESS')) return 'W';
+  if (val.startsWith('OPPORTUNIT')) return 'O';
+  if (val.startsWith('THREAT')) return 'T';
+  // Persian match
+  if (val.includes('قوت') || val.includes('قدرت')) return 'S';
+  if (val.includes('ضعف')) return 'W';
+  if (val.includes('فرصت')) return 'O';
+  if (val.includes('تهدید')) return 'T';
+  // Fallback: return as-is (first char uppercase)
+  return val.charAt(0) as 'S' | 'W' | 'O' | 'T';
+}
 
 interface Props {
   onExit: () => void;
@@ -12,11 +31,14 @@ interface Props {
 
 const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [data, setData] = useState<SwotData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [phase, setPhase] = useState<'sorting' | 'strategy' | 'finished'>('sorting');
   
   // Phase 1 State
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
+  const [sortCorrect, setSortCorrect] = useState(0);
   const [feedback, setFeedback] = useState<{correct: boolean, msg: string} | null>(null);
   
   // Phase 2 State
@@ -24,21 +46,39 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
   const [strategyResult, setStrategyResult] = useState<{correct: boolean, feedback: string} | null>(null);
 
   useEffect(() => {
-    generateSwotData().then(d => setData(d));
+    generateSwotData()
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
   }, []);
+
+  // Timeout safety net: if loading takes more than 15 seconds, show error
+  useEffect(() => {
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      if (loading) { setError(true); setLoading(false); }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const handleChoice = (category: 'S' | 'W' | 'O' | 'T') => {
     if (!data || feedback) return;
     
     const item = data.items[currentIndex];
-    const isCorrect = item.category === category;
+    const isCorrect = normalizeCategory(item.category) === category;
 
+    const categoryLabels: Record<string, string> = { S: 'نقاط قوت (Strengths)', W: 'نقاط ضعف (Weaknesses)', O: 'فرصت‌ها (Opportunities)', T: 'تهدیدها (Threats)' };
     setFeedback({
         correct: isCorrect,
-        msg: isCorrect ? "دقیقاً!" : `اشتباه. این مورد ${item.category} است زیرا: ${item.reason}`
+        msg: isCorrect ? "دقیقاً!" : `اشتباه. این مورد ${categoryLabels[normalizeCategory(item.category)] || item.category} است زیرا: ${item.reason}`
     });
 
-    if (isCorrect) setScore(s => s + 10);
+    if (isCorrect) {
+        sfx.playSuccess();
+        setScore(s => s + 10);
+        setSortCorrect(c => c + 1);
+    } else {
+        sfx.playError();
+    }
 
     setTimeout(() => {
         setFeedback(null);
@@ -59,14 +99,19 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
           feedback: opt.feedback
       });
 
-      if (opt.isCorrect) setScore(s => s + 50); // Big bonus for strategy
+      if (opt.isCorrect) {
+          sfx.playSuccess();
+          setScore(s => s + 50); // Big bonus for strategy
+      } else {
+          sfx.playError();
+      }
 
       setTimeout(() => {
           setPhase('finished');
       }, 3000);
   };
 
-  if (!data) {
+  if (loading) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-slate-50 text-slate-900 animate-fade-in-up">
         <Loader2 className="animate-spin w-10 h-10 text-blue-500 mb-4" />
@@ -75,7 +120,33 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
     );
   }
 
+  if (!data) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-slate-50 text-slate-900 p-8 text-center">
+        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">خطا در بارگذاری</h2>
+        <p className="text-slate-500 mb-6 text-sm">ارتباط با سرور هوش مصنوعی برقرار نشد.</p>
+        <div className="flex gap-3">
+            <button 
+                onClick={() => { setLoading(true); setError(false); generateSwotData().then(d => { setData(d); setLoading(false); }).catch(() => { setError(true); setLoading(false); }); }}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors"
+            >
+                تلاش مجدد
+            </button>
+            <button onClick={onExit} className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition-colors">
+                بازگشت
+            </button>
+        </div>
+      </div>
+    );
+  }
+
   if (phase === 'finished') {
+      // AI generates 8-10 items, so the raw point total has a variable maximum.
+      // Normalize: sorting is worth 50 (proportional to items) and picking the
+      // right strategy is worth 50, for a fixed 0-100 scale.
+      const normalizedScore = Math.round((sortCorrect / Math.max(1, data.items.length)) * 50)
+        + (strategyResult?.correct ? 50 : 0);
       return (
         <div className="h-full flex items-center justify-center bg-slate-50 animate-fade-in-up">
             <div className="max-w-md w-full bg-white p-8 rounded-[2rem] shadow-xl text-center border border-slate-100">
@@ -84,8 +155,14 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
                  </div>
                  <h2 className="text-2xl font-bold text-slate-800 mb-2">پایان تحلیل استراتژیک</h2>
                  <p className="text-slate-500 mb-6">شما فرآیند تحلیل و تدوین استراتژی را تکمیل کردید.</p>
-                 <div className="text-5xl font-black text-blue-600 mb-8">{toPersianNum(score)}</div>
-                 <button onClick={() => onComplete(score)} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                 <div className="text-5xl font-black text-blue-600 mb-2">{toPersianNum(normalizedScore)}<span className="text-xl text-slate-400">/۱۰۰</span></div>
+                 <div className="flex justify-center gap-3 text-xs font-bold text-slate-500 mb-8">
+                     <span className="bg-slate-100 px-3 py-1 rounded-full">طبقه‌بندی: {toPersianNum(sortCorrect)}/{toPersianNum(data.items.length)}</span>
+                     <span className={`px-3 py-1 rounded-full ${strategyResult?.correct ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                        استراتژی: {strategyResult?.correct ? 'صحیح' : 'ناموفق'}
+                     </span>
+                 </div>
+                 <button onClick={() => onComplete(normalizedScore)} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
                     ثبت در کارنامه
                  </button>
             </div>
@@ -97,16 +174,16 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
   if (phase === 'sorting') {
       const currentItem = data.items[currentIndex];
       return (
-        <div className="h-full bg-slate-50 flex flex-col overflow-hidden animate-fade-in-up">
-            <div className="bg-white p-4 border-b border-slate-200 flex justify-between items-center shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="bg-blue-100 p-2 rounded text-blue-600"><Building2 size={20} /></div>
-                    <div>
-                        <h2 className="font-bold text-slate-800">{data.companyContext}</h2>
-                        <p className="text-xs text-slate-500">فاز ۱: طبقه‌بندی ({toPersianNum(currentIndex + 1)}/{toPersianNum(data.items.length)})</p>
+        <div className="h-full bg-slate-50 flex flex-col overflow-y-auto animate-fade-in-up pb-20 md:pb-0">
+            <div className="bg-white p-3 md:p-4 border-b border-slate-200 shadow-sm">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-blue-100 p-2 rounded-lg text-blue-600 shrink-0"><Building2 size={18} /></div>
+                        <p className="text-xs text-slate-500 font-bold">فاز ۱: طبقه‌بندی ({toPersianNum(currentIndex + 1)}/{toPersianNum(data.items.length)})</p>
                     </div>
+                    <div className="text-lg font-bold text-blue-600 tabular-nums bg-blue-50 px-3 py-1 rounded-full">{toPersianNum(score)}</div>
                 </div>
-                <div className="text-xl font-bold text-blue-600 tabular-nums">{toPersianNum(score)}</div>
+                <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">{data.companyContext}</p>
             </div>
 
             <div className="flex-1 p-8 flex flex-col items-center justify-center relative">
@@ -145,7 +222,7 @@ const SwotGame: React.FC<Props> = ({ onExit, onComplete }) => {
 
   // --- PHASE 2: STRATEGY ---
   return (
-    <div className="h-full bg-slate-900 text-white flex flex-col overflow-hidden animate-fade-in">
+    <div className="h-full bg-slate-900 text-white flex flex-col overflow-y-auto animate-fade-in pb-20 md:pb-0">
         <div className="bg-slate-800 p-6 shadow-md border-b border-slate-700 text-center">
             <h2 className="text-2xl font-black text-amber-400 mb-2">فاز ۲: تدوین استراتژی</h2>
             <p className="text-slate-400 text-sm">بر اساس تحلیل‌های انجام شده، بهترین اقدام را انتخاب کنید.</p>
